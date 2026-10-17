@@ -1,0 +1,8 @@
+---
+# Collections the roles use, pinned so lint and builds don't change under us. Molecule's own needs are in
+# extensions/molecule/requirements.yml.
+collections:
+  - name: devsec.hardening
+    version: 11.0.0
+  - name: community.general
+    version: 13.5.0

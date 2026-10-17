@@ -1,0 +1,35 @@
+---
+# Runs the verification entry point of every role whose master gate is enabled,
+# e.g. ansible-playbook afmigoo.provision.verify -e harden_enable=true
+- name: Verify provisioned hosts
+  hosts: "{{ provision_hosts | default('all') }}"
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Verify base setup
+      ansible.builtin.include_role:
+        name: afmigoo.provision.base
+        tasks_from: verification
+      when: base_enable | default(false) | bool
+      tags: [verify]
+
+    - name: Verify hardening
+      ansible.builtin.include_role:
+        name: afmigoo.provision.harden
+        tasks_from: verification
+      when: harden_enable | default(false) | bool
+      tags: [verify]
+
+    - name: Verify podman
+      ansible.builtin.include_role:
+        name: afmigoo.provision.podman
+        tasks_from: verification
+      when: podman_enable | default(false) | bool
+      tags: [verify]
+
+    - name: Verify agent sandbox
+      ansible.builtin.include_role:
+        name: afmigoo.provision.agent_sandbox
+        tasks_from: verification
+      when: agent_sandbox_enable | default(false) | bool
+      tags: [verify]

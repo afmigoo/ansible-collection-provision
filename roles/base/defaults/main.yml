@@ -1,0 +1,27 @@
+---
+# Master gate, the role does nothing unless enabled
+base_enable: false
+
+# First line of every templated file
+base_managed_header: Managed by Ansible (afmigoo.provision.base), local changes will be overwritten
+
+base_enable_wait: true
+base_enable_dns: true
+base_enable_packages: true
+
+# wait_for_connection timeout in seconds (a fresh cloud server may still be booting)
+base_wait_timeout: 300
+
+# Written to a systemd-resolved drop-in; skipped on hosts without systemd-resolved
+base_dns_servers:
+  - 1.1.1.1
+  - 8.8.8.8
+
+base_packages:
+  - curl
+  - wget
+  - htop
+  - tmux
+# Run a safe `apt upgrade` of everything installed
+base_upgrade: false
+base_remove_unattended_upgrades: true

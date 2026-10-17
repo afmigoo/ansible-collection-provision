@@ -1,0 +1,41 @@
+---
+- name: Install ufw
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+
+# With IPv6 off in the kernel, IPV6=yes makes `ufw allow` write IPv6 rules that `ufw enable` drops again,
+# so every run reports a change
+- name: Match ufw IPv6 support to the kernel
+  ansible.builtin.lineinfile:
+    path: /etc/default/ufw
+    regexp: "^IPV6="
+    line: "IPV6={{ 'no' if harden_enable_ipv6_disable | bool else 'yes' }}"
+  notify: Reload ufw
+
+- name: Allow ssh
+  community.general.ufw:
+    rule: allow
+    port: "{{ harden_ufw_ssh_port | string }}"
+    proto: tcp
+    comment: Allow ssh
+
+- name: Allow extra ports
+  community.general.ufw:
+    rule: allow
+    port: "{{ __harden_port | string }}"
+    proto: tcp
+  loop: "{{ harden_ufw_allowed_ports }}"
+  loop_control:
+    loop_var: __harden_port
+
+- name: Enable ufw and deny incoming traffic by default
+  community.general.ufw:
+    state: enabled
+    policy: deny
+
+# `ufw enable` only sets ENABLED=yes; the unit that loads the rules at boot is disabled on some images
+- name: Load the ufw rules at boot
+  ansible.builtin.systemd_service:
+    name: ufw.service
+    enabled: true

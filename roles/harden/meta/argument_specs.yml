@@ -1,0 +1,91 @@
+---
+argument_specs:
+  main:
+    short_description: Harden a Debian or Ubuntu box
+    description:
+      - Disables IPv6 on the kernel command line, applies devsec.hardening.os_hardening and ssh_hardening and
+        enables ufw with deny-by-default incoming.
+      - Any other ssh_* / os_* variable of the devsec roles can be set directly.
+      - The first run reboots the host when the kernel command line changes.
+    author: afmigoo
+    options:
+      harden_enable:
+        type: bool
+        default: false
+        description: Master gate; the role does nothing unless true.
+      harden_managed_header:
+        type: str
+        default: Managed by Ansible (afmigoo.provision.harden), local changes will be overwritten
+        description: Comment written at the top of every templated file.
+      harden_enable_ipv6_disable:
+        type: bool
+        default: true
+        description: Add ipv6.disable=1 to the kernel command line via a GRUB drop-in.
+      harden_enable_os:
+        type: bool
+        default: true
+        description:
+          - Apply devsec.hardening.os_hardening (sysctl, PAM, login.defs, mounts, suid bits, auditd).
+          - Set its os_* and sysctl_* variables directly to tune it.
+      harden_os_allow_userns:
+        type: bool
+        default: false
+        description:
+          - Keep unprivileged user namespaces on (kernel.unprivileged_userns_clone=1).
+          - os_hardening turns them off on Debian and Ubuntu as a CVE-2021-33909 mitigation, which breaks rootless podman.
+      harden_os_sysctl_overwrite:
+        type: dict
+        default: {}
+        description: Sysctls merged into os_hardening's sysctl_overwrite, which this role sets.
+      harden_enable_ssh:
+        type: bool
+        default: true
+        description: Apply devsec.hardening.ssh_hardening.
+      harden_enable_ufw:
+        type: bool
+        default: true
+        description: Allow ssh and the extra ports, deny all other incoming traffic.
+      harden_reboot:
+        type: bool
+        default: true
+        description: Reboot when the GRUB config changed.
+      harden_ssh_permit_root_login:
+        type: str
+        default: "yes"
+        choices: ["yes", "no", "without-password", "prohibit-password", "forced-commands-only"]
+        description: sshd PermitRootLogin.
+      harden_ssh_password_login:
+        type: bool
+        default: false
+        description: Allow password logins.
+      harden_ssh_sftp_enabled:
+        type: bool
+        default: false
+        description: Enable the sftp subsystem.
+      harden_ufw_ssh_port:
+        type: int
+        default: 22
+        description: SSH port to allow in ufw.
+      harden_ufw_allowed_ports:
+        type: list
+        elements: int
+        default: []
+        description: Extra TCP ports to allow in ufw.
+  verification:
+    short_description: Verify the hardening
+    description:
+      - Checks the sshd config, that ufw is active, that IPv6 is off and that the devsec OS hardening applied.
+    author: afmigoo
+    options:
+      harden_enable_os:
+        type: bool
+        default: true
+        description: Expect the devsec sysctl drop-in.
+      harden_enable_ipv6_disable:
+        type: bool
+        default: true
+        description: Expect IPv6 to be disabled.
+      harden_enable_ufw:
+        type: bool
+        default: true
+        description: Expect ufw to be active.

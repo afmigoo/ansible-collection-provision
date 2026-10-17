@@ -1,0 +1,22 @@
+---
+- name: Base setup
+  when: base_enable | bool
+  block:
+    - name: Wait for the host
+      ansible.builtin.import_tasks: _main/wait.yml
+      when: base_enable_wait | bool
+      tags: [base, base_wait, always]
+
+    - name: Preparation
+      ansible.builtin.import_tasks: preparation.yml
+      tags: [base, always]
+
+    - name: DNS
+      ansible.builtin.import_tasks: _main/dns.yml
+      when: base_enable_dns | bool
+      tags: [base, base_dns]
+
+    - name: Packages
+      ansible.builtin.import_tasks: _main/packages.yml
+      when: base_enable_packages | bool
+      tags: [base, base_packages]

@@ -1,0 +1,49 @@
+---
+- name: Probe the hardening state
+  tags: [harden, harden_verify]
+  block:
+    - name: Check the sshd config
+      ansible.builtin.command: sshd -t
+      register: __harden_sshd
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Check ufw status
+      ansible.builtin.command: ufw status
+      register: __harden_ufw
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Check that ufw starts at boot
+      ansible.builtin.systemd_service:
+        name: ufw.service
+      register: __harden_ufw_boot
+      failed_when: false
+
+    - name: Check the devsec sysctl drop-in
+      ansible.builtin.stat:
+        path: /etc/sysctl.d/90-dev-sec.conf
+      register: __harden_sysctl
+
+    - name: Check for IPv6 addresses
+      ansible.builtin.command: ip -6 addr show
+      register: __harden_ipv6
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Assert the hardening
+      ansible.builtin.assert:
+        that:
+          - __harden_sshd.rc == 0
+          - "not (harden_enable_ufw | bool) or 'Status: active' in __harden_ufw.stdout"
+          - not (harden_enable_ufw | bool) or __harden_ufw_boot.status.UnitFileState | default('') == 'enabled'
+          - not (harden_enable_ipv6_disable | bool) or __harden_ipv6.stdout | trim | length == 0
+          - not (harden_enable_os | bool) or __harden_sysctl.stat.exists
+        fail_msg: >-
+          sshd -t rc={{ __harden_sshd.rc }}; ufw: {{ __harden_ufw.stdout_lines | first | default('n/a') }},
+          at boot: {{ __harden_ufw_boot.status.UnitFileState | default('n/a') }};
+          IPv6 addresses present: {{ __harden_ipv6.stdout | trim | length > 0 }};
+          devsec sysctl drop-in present: {{ __harden_sysctl.stat.exists }}

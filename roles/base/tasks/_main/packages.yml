@@ -1,0 +1,21 @@
+---
+- name: Update the apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Upgrade installed packages
+  ansible.builtin.apt:
+    upgrade: safe
+  when: base_upgrade | bool
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ base_packages }}"
+    state: present
+
+- name: Remove unattended-upgrades
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: absent
+  when: base_remove_unattended_upgrades | bool

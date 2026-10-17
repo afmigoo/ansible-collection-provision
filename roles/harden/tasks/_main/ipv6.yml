@@ -1,0 +1,38 @@
+---
+- name: Ensure grub.d exists
+  ansible.builtin.file:
+    path: /etc/default/grub.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# A drop-in appends to the distro's command line instead of replacing it
+- name: Add ipv6.disable=1 to the kernel command line
+  ansible.builtin.template:
+    src: etc/default/grub.d/95-disable-ipv6.cfg.j2
+    dest: /etc/default/grub.d/95-disable-ipv6.cfg
+    owner: root
+    group: root
+    mode: "0644"
+    lstrip_blocks: true
+  notify:
+    - Update GRUB
+    - Reboot for kernel command line changes
+
+# Also catches a run that changed the drop-in but failed before its handlers ran
+- name: Read the running kernel command line
+  ansible.builtin.slurp:
+    src: /proc/cmdline
+  register: __harden_cmdline
+
+- name: Schedule a reboot while the running kernel still has IPv6
+  ansible.builtin.debug:
+    msg: ipv6.disable=1 is not on the running kernel command line, rebooting at the end of the play
+  changed_when: true
+  when:
+    - harden_reboot | bool
+    - "'ipv6.disable=1' not in (__harden_cmdline.content | b64decode)"
+  notify:
+    - Update GRUB
+    - Reboot for kernel command line changes

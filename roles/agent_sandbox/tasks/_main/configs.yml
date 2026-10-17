@@ -1,0 +1,95 @@
+---
+- name: Ensure agent config directories exist
+  ansible.builtin.file:
+    path: "{{ agent_sandbox_home }}/{{ __agent_sandbox_dir }}"
+    state: directory
+    owner: "{{ agent_sandbox_user }}"
+    group: "{{ agent_sandbox_user }}"
+    mode: "0755"
+  loop:
+    - .claude
+    - .claude/commands
+    - .config
+    - .config/opencode
+    - .config/opencode/commands
+    - .config/fish
+    - .config/fish/conf.d
+    - .agent
+    - .agent/memories
+    - .agent/memories/sandbox
+    - .agent/memories/ansible
+  loop_control:
+    loop_var: __agent_sandbox_dir
+
+# One rules file for both agents
+- name: Install the agents' global rules
+  ansible.builtin.template:
+    src: agent/AGENTS.md.j2
+    dest: "{{ agent_sandbox_home }}/{{ __agent_sandbox_dest }}"
+    owner: "{{ agent_sandbox_user }}"
+    group: "{{ agent_sandbox_user }}"
+    mode: "0644"
+    lstrip_blocks: true
+  loop:
+    - .claude/CLAUDE.md
+    - .config/opencode/AGENTS.md
+  loop_control:
+    loop_var: __agent_sandbox_dest
+
+- name: Install agent config files
+  ansible.builtin.copy:
+    src: "agent/{{ __agent_sandbox_file.src }}"
+    dest: "{{ agent_sandbox_home }}/{{ __agent_sandbox_file.dest }}"
+    owner: "{{ agent_sandbox_user }}"
+    group: "{{ agent_sandbox_user }}"
+    mode: "0644"
+  loop:
+    - src: claude-settings.json
+      dest: .claude/settings.json
+    - src: opencode.json
+      dest: .config/opencode/opencode.json
+    - src: remember.md
+      dest: .claude/commands/remember.md
+    - src: remember.md
+      dest: .config/opencode/commands/remember.md
+  loop_control:
+    loop_var: __agent_sandbox_file
+    label: "{{ __agent_sandbox_file.dest }}"
+
+# Memories are written by the agents, so these only seed missing files and
+# never overwrite what the agents added
+- name: Seed templated agent memories
+  ansible.builtin.template:
+    src: "agent/memories/{{ __agent_sandbox_memory }}.j2"
+    dest: "{{ agent_sandbox_home }}/.agent/memories/{{ __agent_sandbox_memory }}"
+    owner: "{{ agent_sandbox_user }}"
+    group: "{{ agent_sandbox_user }}"
+    mode: "0644"
+    force: false
+    lstrip_blocks: true
+  loop:
+    - README.md
+    - sandbox/context.md
+  loop_control:
+    loop_var: __agent_sandbox_memory
+
+- name: Seed static agent memories
+  ansible.builtin.copy:
+    src: "agent/memories/{{ __agent_sandbox_memory }}"
+    dest: "{{ agent_sandbox_home }}/.agent/memories/{{ __agent_sandbox_memory }}"
+    owner: "{{ agent_sandbox_user }}"
+    group: "{{ agent_sandbox_user }}"
+    mode: "0644"
+    force: false
+  loop:
+    - ansible/role-conventions.md
+  loop_control:
+    loop_var: __agent_sandbox_memory
+
+- name: Add ~/.local/bin to the agent PATH in fish
+  ansible.builtin.copy:
+    content: "fish_add_path -g $HOME/.local/bin\n"
+    dest: "{{ agent_sandbox_home }}/.config/fish/conf.d/local-bin.fish"
+    owner: "{{ agent_sandbox_user }}"
+    group: "{{ agent_sandbox_user }}"
+    mode: "0644"

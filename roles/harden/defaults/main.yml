@@ -1,0 +1,30 @@
+---
+# Master gate, the role does nothing unless enabled
+harden_enable: false
+
+# First line of every templated file
+harden_managed_header: Managed by Ansible (afmigoo.provision.harden), local changes will be overwritten
+
+harden_enable_ipv6_disable: true
+harden_enable_os: true
+harden_enable_ssh: true
+harden_enable_ufw: true
+
+# Reboot when the kernel command line changed (needed for IPv6 to go away)
+harden_reboot: true
+
+# Passed to devsec.hardening.ssh_hardening
+harden_ssh_permit_root_login: "yes"
+harden_ssh_password_login: false
+harden_ssh_sftp_enabled: false
+
+# devsec os_hardening disables unprivileged user namespaces on Debian (CVE-2021-33909 mitigation),
+# which rootless podman needs; true keeps them on
+harden_os_allow_userns: false
+# Merged into os_hardening's sysctl_overwrite (the role sets that variable itself, so use this one)
+harden_os_sysctl_overwrite: {}
+# Any other ssh_* / os_* variable of devsec.hardening.ssh_hardening / os_hardening can be set directly
+
+harden_ufw_ssh_port: 22
+# Extra TCP ports to allow besides ssh
+harden_ufw_allowed_ports: []

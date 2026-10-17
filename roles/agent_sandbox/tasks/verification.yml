@@ -1,0 +1,37 @@
+---
+- name: Probe the agent tools
+  tags: [agent_sandbox, agent_sandbox_verify]
+  block:
+    - name: Run claude --version as the agent
+      ansible.builtin.command: "{{ agent_sandbox_home }}/.local/bin/claude --version"
+      become: true
+      become_user: "{{ agent_sandbox_user }}"
+      register: __agent_sandbox_claude
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Run opencode --version
+      ansible.builtin.command: /usr/local/bin/opencode --version
+      register: __agent_sandbox_opencode
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: List the agent's sudo rights
+      ansible.builtin.command: sudo -n -l -U {{ agent_sandbox_user }}
+      register: __agent_sandbox_sudo
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Assert the agent tools
+      ansible.builtin.assert:
+        that:
+          - agent_sandbox_claude_version in __agent_sandbox_claude.stdout | default('')
+          - agent_sandbox_opencode_version in __agent_sandbox_opencode.stdout | default('')
+          - "'is not allowed to run sudo' in __agent_sandbox_sudo.stdout"
+        fail_msg: >-
+          claude: {{ __agent_sandbox_claude.stdout | default(__agent_sandbox_claude.msg | default('')) }},
+          opencode: {{ __agent_sandbox_opencode.stdout | default(__agent_sandbox_opencode.msg | default('')) }},
+          sudo: {{ __agent_sandbox_sudo.stdout_lines | first | default('') }}

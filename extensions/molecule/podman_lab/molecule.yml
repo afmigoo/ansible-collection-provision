@@ -1,0 +1,12 @@
+---
+# Converge with the afmigoo.provision.podman_lab playbook, check idempotence, then run afmigoo.provision.verify.
+# The toggles below tell the verify playbook which roles to check.
+provisioner:
+  name: ansible
+  inventory:
+    group_vars:
+      all:
+        base_enable: true
+        podman_enable: true
+        podman_verify_image: docker.io/library/busybox:1.37
+        podman_rootless_users: [bob, alice, jack]

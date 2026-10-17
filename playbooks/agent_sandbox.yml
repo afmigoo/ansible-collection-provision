@@ -1,0 +1,20 @@
+---
+# Hardened base box plus the Claude Code / opencode agent sandbox.
+# The agent SSH private key is vault-encrypted, so run with --ask-vault-pass and
+# set agent_sandbox_ssh_key_dir. Pass -e harden_enable=false to skip hardening
+# (e.g. on a local VM).
+- name: Provision an agent sandbox
+  hosts: "{{ provision_hosts | default('all') }}"
+  gather_facts: false
+  become: true
+  vars:
+    base_enable: true
+    base_upgrade: true
+    harden_enable: true
+    # rootless podman for the agent needs unprivileged user namespaces
+    harden_os_allow_userns: true
+    agent_sandbox_enable: true
+  roles:
+    - role: afmigoo.provision.base
+    - role: afmigoo.provision.harden
+    - role: afmigoo.provision.agent_sandbox

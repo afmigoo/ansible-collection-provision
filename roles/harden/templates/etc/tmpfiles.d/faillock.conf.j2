@@ -1,0 +1,3 @@
+# {{ harden_managed_header }}
+# os_hardening creates /run/faillock, which is a tmpfs; recreate it on every boot with the same mode
+d /run/faillock 0755 root root -

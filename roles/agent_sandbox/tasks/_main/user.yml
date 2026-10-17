@@ -1,0 +1,40 @@
+---
+- name: Install agent packages
+  ansible.builtin.apt:
+    name: "{{ agent_sandbox_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create the agent user
+  ansible.builtin.user:
+    name: "{{ agent_sandbox_user }}"
+    home: "{{ agent_sandbox_home }}"
+    shell: /usr/bin/fish
+    create_home: true
+    # No supplementary groups, in particular not sudo: the agent owns its home and nothing else
+    groups: []
+    append: false
+
+# The same mode devsec os_hardening enforces on regular users' homes, which runs before this user exists
+- name: Keep the agent home private
+  ansible.builtin.file:
+    path: "{{ agent_sandbox_home }}"
+    state: directory
+    owner: "{{ agent_sandbox_user }}"
+    group: "{{ agent_sandbox_user }}"
+    mode: "0700"
+
+# Earlier versions of this role granted passwordless sudo
+- name: Remove the agent's sudo rule
+  ansible.builtin.file:
+    path: "/etc/sudoers.d/{{ agent_sandbox_user }}"
+    state: absent
+
+- name: Set up rootless podman for the agent
+  ansible.builtin.include_role:
+    name: afmigoo.provision.podman
+  vars:
+    podman_enable: true
+    podman_rootless_users:
+      - "{{ agent_sandbox_user }}"

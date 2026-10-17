@@ -1,0 +1,10 @@
+---
+- name: Gather facts
+  ansible.builtin.setup:
+    gather_subset: [min]
+
+- name: Check that the host is Debian
+  ansible.builtin.assert:
+    that: ansible_facts['os_family'] == 'Debian'
+    fail_msg: "afmigoo.provision.harden supports Debian only, got {{ ansible_facts['os_family'] }}"
+    quiet: true

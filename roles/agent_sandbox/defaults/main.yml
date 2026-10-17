@@ -1,0 +1,39 @@
+---
+# Master gate, the role does nothing unless enabled
+agent_sandbox_enable: false
+
+agent_sandbox_enable_ssh_key: true
+agent_sandbox_enable_configs: true
+agent_sandbox_enable_claude: true
+agent_sandbox_enable_opencode: true
+
+agent_sandbox_user: agent
+agent_sandbox_home: "/home/{{ agent_sandbox_user }}"
+
+# vm or server; picks the host-specific wording of the agents' global rules
+agent_sandbox_host_kind: vm
+# Used in the global rules when agent_sandbox_host_kind is server
+agent_sandbox_server_description: a cloud server (Debian)
+# How the host gets rebuilt, used in the seeded sandbox memory
+agent_sandbox_rebuild_description: >-
+  {{ 'on `vagrant destroy`' if agent_sandbox_host_kind == 'vm' else 'when the server is recreated' }}
+
+agent_sandbox_packages:
+  - fish
+  - tmux
+  - vim
+  - htop
+  - git
+  - curl
+  - jq
+  - ripgrep
+  - fd-find
+  - acl
+
+agent_sandbox_claude_version: "2.1.280"
+agent_sandbox_opencode_version: "1.18.11"
+
+# Directory on the control machine holding the agent's git SSH key (id_ed25519,
+# vault-encrypted, and id_ed25519.pub). Required; a missing key is generated there
+# and provisioning stops until it is encrypted with ansible-vault.
+agent_sandbox_ssh_key_dir: ""

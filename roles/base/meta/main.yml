@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: afmigoo
+  description: Base setup of a Debian or Ubuntu box (wait for it, DNS, packages)
+  license: MIT
+  min_ansible_version: "2.17"
+  platforms:
+    - name: Debian
+      versions:
+        - trixie
+        - bookworm
+    - name: Ubuntu
+      versions:
+        - noble
+        - resolute
+dependencies: []

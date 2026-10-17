@@ -1,0 +1,52 @@
+---
+- name: Probe podman
+  tags: [podman, podman_verify]
+  block:
+    - name: Run podman info as each rootless user
+      ansible.builtin.command: podman info --format '{{ "{{" }}.Host.Security.Rootless{{ "}}" }}'
+      become: true
+      become_user: "{{ __podman_user }}"
+      loop: "{{ podman_rootless_users }}"
+      loop_control:
+        loop_var: __podman_user
+      register: __podman_info
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Assert podman runs rootless
+      ansible.builtin.assert:
+        that:
+          - __podman_result.rc == 0
+          - __podman_result.stdout | trim == 'true'
+        fail_msg: "podman info as {{ __podman_result.__podman_user }}: {{ __podman_result.stderr | default('') }}"
+        quiet: true
+      loop: "{{ __podman_info.results }}"
+      loop_control:
+        loop_var: __podman_result
+        label: "{{ __podman_result.__podman_user }}"
+
+    - name: Run a throwaway container as each rootless user
+      ansible.builtin.command: podman run --rm {{ podman_verify_image }} true
+      become: true
+      become_user: "{{ __podman_user }}"
+      loop: "{{ podman_rootless_users }}"
+      loop_control:
+        loop_var: __podman_user
+      register: __podman_run
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      when: podman_verify_image | length > 0
+
+    - name: Assert the containers ran
+      ansible.builtin.assert:
+        that:
+          - __podman_result.rc == 0
+        fail_msg: "podman run as {{ __podman_result.__podman_user }}: {{ __podman_result.stderr | default('') }}"
+        quiet: true
+      loop: "{{ __podman_run.results }}"
+      loop_control:
+        loop_var: __podman_result
+        label: "{{ __podman_result.__podman_user }}"
+      when: podman_verify_image | length > 0

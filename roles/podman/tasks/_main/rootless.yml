@@ -1,0 +1,31 @@
+---
+# Users created by Debian's useradd usually have a range already. Others get the
+# next free block past every range handed out, so ranges never overlap
+- name: Assign subordinate id ranges to users without one
+  ansible.builtin.shell:
+    cmd: |
+      set -eu
+      if grep -q "^{{ __podman_user }}:" /etc/subuid && grep -q "^{{ __podman_user }}:" /etc/subgid; then
+        exit 0
+      fi
+      touch /etc/subuid /etc/subgid
+      start=$(awk -F: -v m={{ podman_subid_start | int }} '{ e = $2 + $3; if (e > m) m = e } END { print m }' /etc/subuid /etc/subgid)
+      end=$((start + {{ podman_subid_count | int }} - 1))
+      grep -q "^{{ __podman_user }}:" /etc/subuid || usermod --add-subuids "$start-$end" {{ __podman_user }}
+      grep -q "^{{ __podman_user }}:" /etc/subgid || usermod --add-subgids "$start-$end" {{ __podman_user }}
+      echo changed
+    executable: /bin/bash
+  loop: "{{ podman_rootless_users }}"
+  loop_control:
+    loop_var: __podman_user
+  register: __podman_subid_setup
+  changed_when: "'changed' in __podman_subid_setup.stdout"
+
+- name: Enable lingering for rootless users
+  ansible.builtin.command:
+    cmd: "loginctl enable-linger {{ __podman_user }}"
+    creates: "/var/lib/systemd/linger/{{ __podman_user }}"
+  loop: "{{ podman_rootless_users }}"
+  loop_control:
+    loop_var: __podman_user
+  when: podman_linger | bool

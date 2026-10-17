@@ -1,0 +1,27 @@
+---
+- name: Hardening
+  when: harden_enable | bool
+  block:
+    - name: Preparation
+      ansible.builtin.import_tasks: preparation.yml
+      tags: [harden, always]
+
+    - name: Disable IPv6
+      ansible.builtin.import_tasks: _main/ipv6.yml
+      when: harden_enable_ipv6_disable | bool
+      tags: [harden, harden_ipv6]
+
+    - name: Harden the OS
+      ansible.builtin.import_tasks: _main/os.yml
+      when: harden_enable_os | bool
+      tags: [harden, harden_os]
+
+    - name: Harden SSH
+      ansible.builtin.import_tasks: _main/ssh.yml
+      when: harden_enable_ssh | bool
+      tags: [harden, harden_ssh]
+
+    - name: Firewall
+      ansible.builtin.import_tasks: _main/ufw.yml
+      when: harden_enable_ufw | bool
+      tags: [harden, harden_ufw]

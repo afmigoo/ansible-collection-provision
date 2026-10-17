@@ -1,8 +1,7 @@
 ---
 # Hardened base box plus the Claude Code / opencode agent sandbox.
-# The agent SSH private key is vault-encrypted, so run with --ask-vault-pass and
-# set agent_sandbox_ssh_key_dir. Pass -e harden_enable=false to skip hardening
-# (e.g. on a local VM).
+# The agent's git SSH key is generated on the host; its public key is printed at
+# the end. Pass -e harden_enable=false to skip hardening (e.g. on a local VM).
 - name: Provision an agent sandbox
   hosts: "{{ provision_hosts | default('all') }}"
   gather_facts: false

@@ -5,7 +5,8 @@ argument_specs:
     description:
       - Creates the agent user (no sudo) with rootless podman (via afmigoo.provision.podman), installs
         fish, claude and opencode, the agents' configs, global rules and seed memories, and the agent's git SSH key.
-      - The SSH private key is kept vault-encrypted on the control machine, so run with --ask-vault-pass.
+      - The git SSH key is generated on the host when missing and never leaves it; its public key is printed at the
+        end, to be added to git hosts by hand.
     author: afmigoo
     options:
       agent_sandbox_enable:
@@ -15,7 +16,7 @@ argument_specs:
       agent_sandbox_enable_ssh_key:
         type: bool
         default: true
-        description: Install the agent's git SSH key.
+        description: Generate the agent's git SSH key on the host (kept when it already exists).
       agent_sandbox_enable_configs:
         type: bool
         default: true
@@ -60,18 +61,17 @@ argument_specs:
         type: str
         default: "1.18.11"
         description: opencode version.
-      agent_sandbox_ssh_key_dir:
-        type: str
-        default: ""
-        description:
-          - Directory on the control machine with the agent's git SSH key (id_ed25519 vault-encrypted, id_ed25519.pub).
-          - A missing key is generated there; provisioning then stops until it is encrypted.
   verification:
     short_description: Verify the agent sandbox
     description:
-      - Checks that claude and opencode run at the expected versions as the agent user and that it has no sudo rights.
+      - Checks that claude and opencode run at the expected versions as the agent user, that it has no sudo rights and
+        that its git SSH key is valid.
     author: afmigoo
     options:
+      agent_sandbox_enable_ssh_key:
+        type: bool
+        default: true
+        description: Check the agent's git SSH key.
       agent_sandbox_user:
         type: str
         default: agent

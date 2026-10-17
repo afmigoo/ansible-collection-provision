@@ -1,51 +1,4 @@
 ---
-- name: Prepare the agent SSH key on the control machine
-  delegate_to: localhost
-  become: false
-  run_once: true
-  vars:
-    ansible_python_interpreter: "{{ ansible_playbook_python }}"
-  block:
-    - name: Ensure the key directory exists
-      ansible.builtin.file:
-        path: "{{ agent_sandbox_ssh_key_dir }}"
-        state: directory
-        mode: "0700"
-
-    # The key lives on the control machine so it survives a host rebuild; it is only
-    # generated when missing, an existing key is reused as is
-    - name: Generate the agent SSH key if missing
-      ansible.builtin.command:
-        argv:
-          - ssh-keygen
-          - -t
-          - ed25519
-          - -N
-          - ""
-          - -C
-          - "{{ agent_sandbox_user }}@{{ inventory_hostname }}"
-          - -f
-          - "{{ agent_sandbox_ssh_key_dir }}/id_ed25519"
-        creates: "{{ agent_sandbox_ssh_key_dir }}/id_ed25519"
-
-    - name: Read the private key header
-      ansible.builtin.command:
-        argv: [head, -c, "14", "{{ agent_sandbox_ssh_key_dir }}/id_ed25519"]
-      register: __agent_sandbox_key_header
-      changed_when: false
-      failed_when: false
-      check_mode: false
-
-    # copy decrypts it with the vault password. A freshly generated key is plain
-    # text and has to be encrypted first
-    - name: Check that the private key is vault-encrypted
-      ansible.builtin.assert:
-        that: __agent_sandbox_key_header.stdout == '$ANSIBLE_VAULT'
-        fail_msg: >-
-          {{ agent_sandbox_ssh_key_dir }}/id_ed25519 is not vault-encrypted, run
-          ansible-vault encrypt on it and provision again
-        quiet: true
-
 - name: Ensure the agent .ssh directory exists
   ansible.builtin.file:
     path: "{{ agent_sandbox_home }}/.ssh"
@@ -54,18 +7,31 @@
     group: "{{ agent_sandbox_user }}"
     mode: "0700"
 
-- name: Install the agent SSH key
-  ansible.builtin.copy:
-    src: "{{ agent_sandbox_ssh_key_dir }}/{{ __agent_sandbox_ssh_file.name }}"
-    dest: "{{ agent_sandbox_home }}/.ssh/{{ __agent_sandbox_ssh_file.name }}"
-    owner: "{{ agent_sandbox_user }}"
-    group: "{{ agent_sandbox_user }}"
-    mode: "{{ __agent_sandbox_ssh_file.mode }}"
-  loop:
-    - name: id_ed25519
-      mode: "0600"
-    - name: id_ed25519.pub
-      mode: "0644"
-  loop_control:
-    loop_var: __agent_sandbox_ssh_file
-    label: "{{ __agent_sandbox_ssh_file.name }}"
+# In check mode on a new host the agent user is only simulated, and become_user can't switch to it
+- name: Look up the agent user in check mode
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ agent_sandbox_user }}"
+    fail_key: false
+  when: ansible_check_mode
+
+# The private key never leaves the host. It is only generated when missing, so re-provisioning keeps it and the
+# deploy keys added for it; a rebuilt host gets a new one
+- name: Generate the agent SSH key if missing
+  ansible.builtin.command:
+    argv:
+      - ssh-keygen
+      - -t
+      - ed25519
+      - -N
+      - ""
+      - -C
+      - "{{ agent_sandbox_user }}@{{ inventory_hostname }}"
+      - -f
+      - "{{ agent_sandbox_home }}/.ssh/id_ed25519"
+    creates: "{{ agent_sandbox_home }}/.ssh/id_ed25519"
+  become: true
+  become_user: "{{ agent_sandbox_user }}"
+  when: >-
+    not ansible_check_mode
+    or (ansible_facts['getent_passwd'] | default({})).get(agent_sandbox_user) is not none

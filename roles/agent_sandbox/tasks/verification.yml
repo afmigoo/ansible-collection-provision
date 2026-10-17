@@ -35,3 +35,42 @@
           claude: {{ __agent_sandbox_claude.stdout | default(__agent_sandbox_claude.msg | default('')) }},
           opencode: {{ __agent_sandbox_opencode.stdout | default(__agent_sandbox_opencode.msg | default('')) }},
           sudo: {{ __agent_sandbox_sudo.stdout_lines | first | default('') }}
+
+- name: Check the agent SSH key
+  when: agent_sandbox_enable_ssh_key | default(true) | bool
+  tags: [agent_sandbox, agent_sandbox_verify]
+  block:
+    - name: Stat the agent SSH private key
+      ansible.builtin.stat:
+        path: "{{ agent_sandbox_home }}/.ssh/id_ed25519"
+      register: __agent_sandbox_key_stat
+
+    - name: Derive the public key from the private key
+      ansible.builtin.command:
+        argv: [ssh-keygen, -y, -f, "{{ agent_sandbox_home }}/.ssh/id_ed25519"]
+      become: true
+      become_user: "{{ agent_sandbox_user }}"
+      register: __agent_sandbox_key_derived
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Read the agent SSH public key
+      ansible.builtin.slurp:
+        src: "{{ agent_sandbox_home }}/.ssh/id_ed25519.pub"
+      register: __agent_sandbox_key_pub
+      failed_when: false
+
+    - name: Assert the agent SSH key
+      ansible.builtin.assert:
+        that:
+          - __agent_sandbox_key_stat.stat.exists
+          - __agent_sandbox_key_stat.stat.pw_name == agent_sandbox_user
+          - __agent_sandbox_key_stat.stat.mode == '0600'
+          - __agent_sandbox_key_derived.rc == 0
+          - >-
+            (__agent_sandbox_key_pub.content | default('') | b64decode).split()[:2]
+            == __agent_sandbox_key_derived.stdout.split()[:2]
+        fail_msg: >-
+          {{ agent_sandbox_home }}/.ssh/id_ed25519 is missing, not owned by {{ agent_sandbox_user }} with mode 0600,
+          unreadable ({{ __agent_sandbox_key_derived.stderr | default('') }}) or doesn't match id_ed25519.pub

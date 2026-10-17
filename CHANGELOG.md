@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `agent_sandbox`: the agent's git SSH private key may also be sops-encrypted (decrypted with `community.sops`, now a
+  dependency) or plain; a freshly generated key no longer stops the run until it is encrypted.
+
 ## 0.1.0
 
 - Initial release: roles `base`, `harden`, `podman`, `agent_sandbox` and playbooks `basic_hardening`, `agent_sandbox`,

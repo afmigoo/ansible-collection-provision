@@ -59,14 +59,20 @@ ansible-playbook afmigoo.provision.basic_hardening -e '{"harden_ufw_allowed_port
 ### Agent sandbox
 
 The agent's git SSH key lives on the control machine in
-`agent_sandbox_ssh_key_dir`. On the first run it is generated and the playbook
-stops until you encrypt it:
+`agent_sandbox_ssh_key_dir` (`id_ed25519`, `id_ed25519.pub`). On the first run it
+is generated there, unencrypted. Encrypt the private key with either tool; the
+role tells them apart by content:
 
 ```sh
+ansible-vault encrypt keys/agent-sandbox/id_ed25519      # then run with --ask-vault-pass
+sops encrypt -i keys/agent-sandbox/id_ed25519            # needs sops and a .sops.yaml or --age
 ansible-playbook afmigoo.provision.agent_sandbox --ask-vault-pass \
   -e agent_sandbox_ssh_key_dir=$PWD/keys/agent-sandbox -e agent_sandbox_host_kind=server
-ansible-vault encrypt keys/agent-sandbox/id_ed25519   # first run only
 ```
+
+A sops-encrypted key is decrypted with the `community.sops` lookup, so the
+control machine needs the `sops` binary and the key to decrypt it (e.g.
+`SOPS_AGE_KEY_FILE`).
 
 `agent_sandbox_host_kind` (`vm` or `server`) picks the wording of the agents'
 global rules (`~/.claude/CLAUDE.md`, `~/.config/opencode/AGENTS.md`).
@@ -77,7 +83,7 @@ global rules (`~/.claude/CLAUDE.md`, `~/.config/opencode/AGENTS.md`).
 deb13.vm.provision "ansible" do |ansible|
   ansible.compatibility_mode = "2.0"
   ansible.playbook = "playbook.yml"  # - ansible.builtin.import_playbook: afmigoo.provision.agent_sandbox
-  ansible.ask_vault_pass = true
+  ansible.ask_vault_pass = true  # only for a vault-encrypted key
   ansible.become = true
   ansible.extra_vars = {
     agent_sandbox_ssh_key_dir: "#{__dir__}/keys/agent-sandbox",
@@ -119,7 +125,7 @@ make destroy                # clean up after an interrupted run
 
 Scenarios run sequentially, so a test never uses more than one scenario's four
 VMs (4 vCPU, 6 GiB) at a time. Don't pass `--workers` above 1 on a small host. `agent_sandbox`
-skips the vault-encrypted git SSH key.
+skips the git SSH key.
 
 Role conventions (variable prefixes, layout, check mode, tags, handlers) follow
 `roles/agent_sandbox/files/agent/memories/ansible/role-conventions.md`.

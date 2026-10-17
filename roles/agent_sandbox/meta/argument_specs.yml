@@ -5,7 +5,8 @@ argument_specs:
     description:
       - Creates the agent user (no sudo) with rootless podman (via afmigoo.provision.podman), installs
         fish, claude and opencode, the agents' configs, global rules and seed memories, and the agent's git SSH key.
-      - The SSH private key is kept vault-encrypted on the control machine, so run with --ask-vault-pass.
+      - The SSH private key on the control machine may be vault-encrypted (run with --ask-vault-pass), sops-encrypted
+        (needs the sops binary and its key on the control machine) or plain.
     author: afmigoo
     options:
       agent_sandbox_enable:
@@ -64,8 +65,8 @@ argument_specs:
         type: str
         default: ""
         description:
-          - Directory on the control machine with the agent's git SSH key (id_ed25519 vault-encrypted, id_ed25519.pub).
-          - A missing key is generated there; provisioning then stops until it is encrypted.
+          - Directory on the control machine with the agent's git SSH key (id_ed25519, id_ed25519.pub).
+          - id_ed25519 may be vault-encrypted, sops-encrypted or plain; a missing key is generated there, unencrypted.
   verification:
     short_description: Verify the agent sandbox
     description:

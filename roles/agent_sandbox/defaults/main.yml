@@ -33,7 +33,7 @@ agent_sandbox_packages:
 agent_sandbox_claude_version: "2.1.280"
 agent_sandbox_opencode_version: "1.18.11"
 
-# Directory on the control machine holding the agent's git SSH key (id_ed25519,
-# vault-encrypted, and id_ed25519.pub). Required; a missing key is generated there
-# and provisioning stops until it is encrypted with ansible-vault.
+# Directory on the control machine holding the agent's git SSH key (id_ed25519 and
+# id_ed25519.pub). The private key may be vault-encrypted, sops-encrypted or plain.
+# Required; a missing key is generated there.
 agent_sandbox_ssh_key_dir: ""

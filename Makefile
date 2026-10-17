@@ -19,7 +19,7 @@ help:
 install:
 	pip install -r requirements.txt
 	ansible-galaxy collection install -r extensions/molecule/requirements.yml
-	ansible-galaxy collection install devsec.hardening community.general
+	ansible-galaxy collection install -r requirements.yml
 
 lint:
 	ansible-lint

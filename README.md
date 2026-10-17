@@ -100,6 +100,9 @@ make build      # collection tarball
 
 `make` lists every target.
 
+CI (GitHub Actions) runs `make lint`, builds and installs the tarball to syntax-check the playbooks from it, and scans
+for secrets (gitleaks) and workflow problems (actionlint, zizmor). The Molecule tests need VMs and stay local.
+
 ### Molecule tests
 
 `extensions/molecule/` has one scenario per playbook (`basic_hardening`,

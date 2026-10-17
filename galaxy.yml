@@ -24,6 +24,8 @@ build_ignore:
   - .gitignore
   - .python-version
   - requirements.txt
+  - requirements.yml
+  - .github
   - .ansible
   - .claude
   - .ansible-lint

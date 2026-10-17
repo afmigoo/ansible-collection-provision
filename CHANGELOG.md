@@ -13,3 +13,5 @@
 - Ubuntu 24.04 and 26.04 support, tested with Molecule alongside Debian 12 and 13.
 - `harden`: works around devsec ssh_hardening leaving sshd stopped on Ubuntu (dev-sec/ansible-collection-hardening#941),
   enables `ufw.service` at boot, removes apport on Ubuntu, and keeps `/var/log` and `/run/faillock` stable across reboots.
+- GitHub Actions CI: ansible-lint, a build and install check, gitleaks, actionlint and zizmor. Collections are pinned in
+  `requirements.yml`; Dependabot updates the pip packages and actions.

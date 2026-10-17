@@ -1,15 +1,13 @@
 # Ansible Role Conventions
 
-General standards for creating Ansible roles, informed by the gold-standard
-nginx role in the powerops.services repo (`roles/nginx`); clone it if you need
-the example.
+General standards for creating Ansible roles.
 
 ## Variable Naming (3-tier)
 
 - **Configurable vars**: `<prefix>_*` — settable by the user, defined in
   `defaults/main.yml` or passed via `--extra-vars`. The prefix is the role
-  name with hyphens replaced by underscores (e.g. `nginx_enable`,
-  `nginx_servers`).
+  name with hyphens replaced by underscores (e.g. `podman_enable`,
+  `podman_rootless_users`).
 
 - **Internal/utility vars**: `_<prefix>_*` — programmatically set within the
   role (`set_fact`, rendered/computed data), not meant for user override.
@@ -41,10 +39,9 @@ roles/<name>/
   README.md
 ```
 
-See the nginx role in powerops.services (`roles/nginx`) for a
-concrete example. Its internal subdirectories (`tasks/_main/`,
-`tasks/_preparation/`, `tasks/_cert/`) follow its own domain-specific
-organization — tailor yours to the role's needs, not a copy of nginx's.
+Internal subdirectories (`tasks/_main/`, `tasks/_preparation/`, ...) follow
+the role's own domain; tailor them to its needs rather than copying another
+role's layout.
 
 ## Check Mode
 

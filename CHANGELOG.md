@@ -8,7 +8,7 @@
 - Makefile with development shortcuts.
 - `harden` applies `devsec.hardening.os_hardening` (`harden_enable_os`); requires devsec.hardening 11.
 - `podman` verification can run a throwaway container (`podman_verify_image`).
-- `agent_sandbox`: the agent user no longer gets sudo; reruns remove the old sudoers rule and group membership.
+- `agent_sandbox`: the agent user has no sudo.
 - `harden`: `harden_os_allow_userns` and `harden_os_sysctl_overwrite`; rootless podman needs the former.
 - Ubuntu 24.04 and 26.04 support, tested with Molecule alongside Debian 12 and 13.
 - `harden`: works around devsec ssh_hardening leaving sshd stopped on Ubuntu (dev-sec/ansible-collection-hardening#941),

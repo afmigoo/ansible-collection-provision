@@ -25,12 +25,6 @@
     group: "{{ agent_sandbox_user }}"
     mode: "0700"
 
-# Earlier versions of this role granted passwordless sudo
-- name: Remove the agent's sudo rule
-  ansible.builtin.file:
-    path: "/etc/sudoers.d/{{ agent_sandbox_user }}"
-    state: absent
-
 - name: Set up rootless podman for the agent
   ansible.builtin.include_role:
     name: afmigoo.provision.podman

@@ -6,7 +6,9 @@ argument_specs:
       - Copies files from the control machine to the host. A source may be plain, ansible-vault encrypted or
         sops-encrypted; the format is detected from its content.
       - Sops-encrypted sources are decrypted with the community.sops lookup, which needs the sops binary and the
-        decryption key on the control machine, and must be text. Vault-encrypted sources need a vault password.
+        decryption key on the control machine. Vault-encrypted sources need a vault password.
+      - Checks the sources, owners, groups and destination directories before copying, creates new files with their
+        owner and mode before writing content, and never shows diffs.
     author: afmigoo
     options: &files_options
       files_enable:
@@ -26,7 +28,7 @@ argument_specs:
           dest:
             type: str
             required: true
-            description: Absolute path on the host; its directory must exist.
+            description: Absolute path on the host; its directory must exist. No two entries may share it.
           owner:
             type: str
             default: root
@@ -38,7 +40,7 @@ argument_specs:
           mode:
             type: str
             default: "0600"
-            description: Mode of the file on the host.
+            description: Mode of the file on the host, quoted (e.g. "0640").
   verification:
     short_description: Verify the copied files
     description:

@@ -3,8 +3,10 @@
 ## Unreleased
 
 - New role `files`: copies `files_list` from the control machine to the host. Sources may be plain, ansible-vault or
-  sops-encrypted (detected by content, decrypted with `community.sops`, now a dependency). Every playbook runs it last
-  and `verify` checks it; the `basic_hardening` Molecule scenario covers all three formats.
+  sops-encrypted (detected by content, decrypted with `community.sops`, now a dependency). It checks sources, owners,
+  groups and destination directories first, creates new files with their owner and mode before writing content, and
+  never shows diffs. Every playbook runs it last and `verify` checks it; the `basic_hardening` Molecule scenario covers
+  all three formats and checks the fixture contents.
 
 ## 0.1.0
 

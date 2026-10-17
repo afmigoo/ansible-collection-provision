@@ -1,6 +1,22 @@
 ---
+# A new file gets its owner and mode before any content: copy would otherwise create it world-readable and only then
+# chmod it. Times are preserved, so an existing file stays unchanged when its owner and mode are right
+- name: Create missing files with their owner and mode
+  ansible.builtin.file:
+    path: "{{ __files_item.dest }}"
+    state: touch
+    owner: "{{ __files_item.owner | default('root') }}"
+    group: "{{ __files_item.group | default('root') }}"
+    mode: "{{ __files_item.mode | default('0600') }}"
+    modification_time: preserve
+    access_time: preserve
+  loop: "{{ files_list }}"
+  loop_control:
+    loop_var: __files_item
+    label: "{{ __files_item.dest }}"
+
 # A sops-encrypted source (detected in preparation) is copied from the community.sops lookup, anything else (plain
-# or vault-encrypted) with copy, which decrypts vault itself
+# or vault-encrypted) with copy, which decrypts vault itself. No diffs: they would show the decrypted content
 - name: Copy the sops-encrypted files
   ansible.builtin.copy:
     # rstrip=false keeps the trailing newline. Lookup results are not templated again, so braces stay as they are
@@ -13,6 +29,7 @@
   loop_control:
     loop_var: __files_item
     label: "{{ __files_item.dest }}"
+  diff: false
   when: __files_item.src in _files_sops_srcs
   register: __files_sops_copy
   no_log: true
@@ -28,5 +45,6 @@
   loop_control:
     loop_var: __files_item
     label: "{{ __files_item.dest }}"
+  diff: false
   when: __files_item.src not in _files_sops_srcs
   register: __files_plain_copy

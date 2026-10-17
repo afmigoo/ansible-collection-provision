@@ -9,5 +9,5 @@ files_enable: false
 #     group: root                                    # default root
 #     mode: "0600"                                   # default 0600
 # src may be plain, ansible-vault encrypted (run with a vault password) or sops-encrypted (needs the sops binary
-# and its key on the control machine). Sops-encrypted files must be text.
+# and its key on the control machine). Sops files are written as `sops decrypt` prints them, see the README.
 files_list: []

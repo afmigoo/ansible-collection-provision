@@ -1,3 +1,38 @@
 ---
 - name: Verify
   ansible.builtin.import_playbook: afmigoo.provision.verify
+
+# The role's own verification compares the host with a fresh copy, which can't catch a wrong decryption. Check the
+# fixtures against the checksums of their plaintext (sops.yaml as sops re-serializes it)
+- name: Verify the fixture contents
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Stat the copied fixtures
+      ansible.builtin.stat:
+        path: "{{ __molecule_fixture.dest }}"
+        checksum_algorithm: sha1
+      loop:
+        - {dest: /etc/molecule-plain.txt, sha1: f93ae2b54986643ade853e9478d1f505f9679cbe, owner: root, mode: "0644"}
+        - {dest: /etc/molecule-vault.txt, sha1: 34e8393edefb26db7e937ff4ed4c5ef2df657412, owner: root, mode: "0600"}
+        - {dest: /etc/molecule-sops.yaml, sha1: c1a98652909f1217956b0276d276e8ada4a9627d, owner: root, mode: "0600"}
+        - {dest: /etc/molecule-sops.env, sha1: 0102a4fe1887f1cffd2fed971062f65a5f3ca65a, owner: root, mode: "0640"}
+        - {dest: /etc/molecule-sops.conf, sha1: d870296b4072a03ca76439b5949db595a689df3d, owner: root, mode: "0600"}
+      loop_control:
+        loop_var: __molecule_fixture
+        label: "{{ __molecule_fixture.dest }}"
+      register: __molecule_fixture_stat
+
+    - name: Assert the fixture contents
+      ansible.builtin.assert:
+        that:
+          - __molecule_result.stat.checksum | default('') == __molecule_result.__molecule_fixture.sha1
+          - __molecule_result.stat.pw_name | default('') == __molecule_result.__molecule_fixture.owner
+          - __molecule_result.stat.mode | default('') == __molecule_result.__molecule_fixture.mode
+        fail_msg: "{{ __molecule_result.__molecule_fixture.dest }} has the wrong content, owner or mode"
+        quiet: true
+      loop: "{{ __molecule_fixture_stat.results }}"
+      loop_control:
+        loop_var: __molecule_result
+        label: "{{ __molecule_result.__molecule_fixture.dest }}"

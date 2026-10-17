@@ -91,7 +91,19 @@ files_list:
 `src` has to be absolute because a collection playbook resolves relative paths
 inside the installed collection. Vault-encrypted sources need a vault password
 (`--ask-vault-pass`); sops-encrypted ones need the `sops` binary and the key to
-decrypt them on the control machine (e.g. `SOPS_AGE_KEY_FILE`), and must be text.
+decrypt them on the control machine (e.g. `SOPS_AGE_KEY_FILE`).
+
+- A sops file reaches the host as `sops decrypt` prints it. Its format comes
+  from the file extension, and yaml, json, dotenv and ini files are parsed and
+  written out again: same data, not always the same bytes (quotes, indentation,
+  YAML 1.1 values such as `0012`). For byte-exact content encrypt with
+  `--input-type binary` and keep an extension sops doesn't parse (e.g. `.conf`).
+- Every sops-encrypted source is decrypted. To put the encrypted file itself on
+  the host, wrap it in ansible-vault.
+- The role checks the sources, owners, groups and destination directories
+  before copying, creates new files with their owner and mode before writing
+  content, and never shows diffs (`--diff`), so decrypted content stays out of
+  the output.
 
 ### Vagrant
 

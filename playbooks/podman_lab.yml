@@ -33,3 +33,6 @@
     - name: Copy files
       ansible.builtin.include_role:
         name: afmigoo.provision.files
+        apply:
+          tags: [files]
+      tags: [files]

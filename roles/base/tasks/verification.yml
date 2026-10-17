@@ -1,0 +1,22 @@
+---
+- name: Check name resolution
+  ansible.builtin.command: getent hosts deb.debian.org
+  register: __base_resolve
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  tags: [base, base_verify]
+
+- name: Gather package facts
+  ansible.builtin.package_facts:
+  tags: [base, base_verify]
+
+- name: Assert the base setup
+  ansible.builtin.assert:
+    that:
+      - __base_resolve.rc == 0
+      - base_packages | difference(ansible_facts['packages'].keys()) | length == 0
+    fail_msg: >-
+      DNS lookup rc={{ __base_resolve.rc }}, missing packages:
+      {{ base_packages | difference(ansible_facts['packages'].keys()) }}
+  tags: [base, base_verify]

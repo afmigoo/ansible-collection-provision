@@ -1,0 +1,61 @@
+---
+argument_specs:
+  main:
+    short_description: Base setup of a Debian or Ubuntu box
+    description:
+      - Waits for the host, points systemd-resolved at fixed DNS servers and installs base packages.
+    author: afmigoo
+    options:
+      base_enable:
+        type: bool
+        default: false
+        description: Master gate; the role does nothing unless true.
+      base_managed_header:
+        type: str
+        default: Managed by Ansible (afmigoo.provision.base), local changes will be overwritten
+        description: Comment written at the top of every templated file.
+      base_enable_wait:
+        type: bool
+        default: true
+        description: Wait for the connection before anything else.
+      base_enable_dns:
+        type: bool
+        default: true
+        description: Configure DNS servers for systemd-resolved (skipped when it is not installed).
+      base_enable_packages:
+        type: bool
+        default: true
+        description: Update the apt cache, install, upgrade and remove packages.
+      base_wait_timeout:
+        type: int
+        default: 300
+        description: Seconds to wait for the connection.
+      base_dns_servers:
+        type: list
+        elements: str
+        default: [1.1.1.1, 8.8.8.8]
+        description: DNS servers for systemd-resolved.
+      base_packages:
+        type: list
+        elements: str
+        default: [curl, wget, htop, tmux]
+        description: Packages to install.
+      base_upgrade:
+        type: bool
+        default: false
+        description: Upgrade all installed packages (apt safe upgrade).
+      base_remove_unattended_upgrades:
+        type: bool
+        default: true
+        description: Remove unattended-upgrades so packages only change when provisioning runs.
+  verification:
+    short_description: Verify the base setup
+    description:
+      - Checks that name resolution works and the base packages are installed.
+    author: afmigoo
+    options:
+      base_packages:
+        type: list
+        elements: str
+        default: [curl, wget, htop, tmux]
+        description: Packages expected to be installed.

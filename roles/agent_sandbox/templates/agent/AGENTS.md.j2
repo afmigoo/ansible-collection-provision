@@ -1,0 +1,159 @@
+# Global rules (agent-sandbox {{ _agent_sandbox_host_word }})
+
+## Environment
+
+{% if agent_sandbox_host_kind == 'vm' %}
+You run in the `{{ inventory_hostname }}` VM ({{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_release'] }}) as user `{{ agent_sandbox_user }}`, without
+`sudo`, with rootless podman. Check its resources with `nproc`, `free -h` and `df -h /`
+when they matter; they change with the VM definition. You own your home directory and your
+containers; packages and system config come from provisioning, so if a task needs a system
+change, ask the user. Effects outside the VM are real: git pushes go to the user's real
+hosts, and the VM disk is a file on the host's disk.
+{% else %}
+You run on {{ agent_sandbox_server_description }} as user `{{ agent_sandbox_user }}`, without `sudo`, with
+rootless podman. Check its resources with `nproc`, `free -h` and `df -h /` when they
+matter; they change with the server specs. You own your home directory and your
+containers; packages and system config come from provisioning, so if a task needs a system
+change, ask the user. Effects outside it are real: git pushes go to the user's real hosts.
+
+The server is on the public internet and hardened by provisioning: SSH key-only, ufw
+denies all incoming traffic except ssh, IPv6 is off. Don't open ports, disable ufw or
+change sshd config; if a task needs that, ask the user (ports are managed in their IaC).
+Don't expose services on public interfaces; bind to 127.0.0.1.
+{% endif %}
+
+Claude Code (`claude`) and opencode (`opencode`) both run as `agent` and share this home,
+its repos, the SSH key and `~/.agent/memories`. Another agent may have used the same
+checkout: run `git status` before assuming the working tree is yours.
+
+This file is provisioned (as `~/.claude/CLAUDE.md` and `~/.config/opencode/AGENTS.md`)
+and overwritten on every provision. To change global rules, write the proposed text to
+`~/handoff-vm-manager.md` and tell the user; don't edit this file.
+
+Nothing {{ 'in' if agent_sandbox_host_kind == 'vm' else 'on' }} the {{ _agent_sandbox_host_word }} survives a rebuild except what provisioning installs: push your work,
+and expect tool logins and tokens to be gone after a rebuild.
+
+### Git over SSH
+
+Use `~/.ssh/id_ed25519` (the default key) and SSH remotes (`git@host:org/repo.git`).
+Never replace or regenerate it. If a host answers `Permission denied (publickey)`, show
+the user `~/.ssh/id_ed25519.pub` and ask them to add it. For a new host, accept its key
+once with `ssh -o StrictHostKeyChecking=accept-new -T git@<host>`.
+Ask before force-pushing, deleting remote branches or tags, or pushing to a default branch.
+
+### Disk
+
+{% if agent_sandbox_host_kind == 'vm' %}
+The VM's disk lives on the host's disk; filling it suspends the VM.
+{% else %}
+The server's disk is small and fixed; filling it breaks the server.
+{% endif %}
+- Run `df -h /` before container image builds or large builds.
+- Remove superseded images; after an interrupted build run `podman image prune -f` and
+  `rm -rf /var/tmp/buildah*`.
+- Keep build output inside the project and prune incremental caches that grow past ~10 GB.
+{% if agent_sandbox_host_kind == 'vm' %}
+- After deleting a lot, ask the user to run `sudo fstrim -av` so the host gets the space back.
+{% endif %}
+
+## Working with the user
+
+- Before building a feature, list its design decisions with a recommendation for each and
+  ask about the ones with real trade-offs (data model, on-disk or wire formats, visible UX).
+  Decide small mechanical choices yourself and mention them.
+- The user's personal data never comes to this {{ _agent_sandbox_host_word }}. To diagnose it, give the user commands
+  that print only counts or sums (e.g. jq one-liners).
+
+## Subagents and models
+
+Standing permission (user, 2026-10-12): delegate the work below to subagents without
+asking, and name the model tier on every spawn. The main session plans, triages, decides
+and talks to the user; it doesn't reproduce, hand-test or read long logs itself. Make a
+small edit directly when that is cheaper than briefing an agent.
+
+| Tier     | Claude Code | opencode       | Use for |
+|----------|-------------|----------------|---------|
+| strong   | Opus        | DeepSeek Pro   | fix batches (find, fix, verify by hand); bug hunting; reviews that decide what protects data; planning QA rounds and writing their report |
+| standard | Sonnet      | DeepSeek Flash | hand testing and re-checking fixes; applying an agreed list; docs restructuring; mechanical cleanup |
+| light    | Haiku       | DeepSeek Flash | searches and lookups; summarizing long output (tests, linters, CI logs); checking that paths and names in notes still exist. Never code changes or reviews |
+
+No agent: releases; tiny fully specified steps (applying a checked patch, one test run);
+waiting on CI with a background loop that prints only the jobs' results. If your tool
+can't pick a model per spawn, use the closest one it offers and say so.
+
+Only one agent at a time changes a git working tree; read-only agents may run in parallel.
+
+### Delegating from Claude Code to opencode
+
+Claude Code's own agent tools can't reach opencode, but Claude Code can hand work to the
+DeepSeek tiers by running opencode headless from its shell. DeepSeek costs the user API
+money, so Claude Code's default stays its own tiers (Opus, Sonnet, Haiku). Use opencode
+only for hand testing (emulator, TUI, QA rounds), when Claude's session limit is running
+low, or when the user asks for it.
+
+1. Write a brief to `~/handoff-<task>.md`: the tier and model, the rules (read-only, or
+   which files it may change), steps that name exact commands, paths and expected results,
+   where to write the report (`~/handoff-<task>-report.md`), and "if blocked, write why in
+   the report and stop". The run can't ask questions.
+2. Run it in the background with the message **before** `-f`. `-f` takes a list, so a
+   message after it is read as another file and the run fails with "File not found":
+   `opencode run "Follow the attached hand-off note exactly." -m deepseek/deepseek-flash --dir <repo> --auto --title "<task>" -f ~/handoff-<task>.md > <scratchpad>/opencode-<task>.log 2>&1; echo "exit $?"; git -C <repo> status --short`
+   Models: `deepseek/deepseek-flash` (standard/light), `deepseek/deepseek-v4-pro` (strong);
+   `opencode models` lists them. `--auto` approves permission prompts, since nobody is
+   there to answer them.
+3. Check that it started: the log begins with `> build · deepseek-...` and
+   `opencode session list` shows the title. If `opencode auth list` doesn't show DeepSeek,
+   the login is gone (e.g. after a rebuild): ask the user to run `opencode auth login`.
+4. When it exits, read the exit code, `git status` (a read-only brief leaves no new
+   changes) and the report. Don't read the log in the main session. Check every finding
+   against the code before acting on it.
+5. A report can't prove "found" claims: spot-check a few yourself, or have a light agent
+   audit `opencode export <session id>` (the full session as JSON, every tool call).
+6. Follow up in the same session with `opencode run "<question>" -s <session id> -m ...`.
+   The user can open it in opencode.
+
+The one-agent-per-working-tree rule covers these runs too: while a run that writes is
+going, the main session doesn't edit that checkout.
+
+### QA rounds
+
+1. Strong plans: reads the project notes and backlog, writes one prompt per interface the
+   project has (e.g. CLI/TUI, app, web).
+2. Standard, round 1: one agent per interface, in parallel, reporting only.
+3. Strong finds the gaps: what each agent missed, judged by what the others tried.
+4. Standard, round 2: checks those gaps.
+5. Strong writes the final report: drops what is decided or known, sorts findings into bug
+   with repro / UX suggestion / decision for the user, checks every high-priority finding
+   against the code.
+6. The user decides; then strong agents fix in batches.
+
+## Tests
+
+Add a test when a bug could lose, corrupt or split data (storage, sync, merge, undo,
+import/export, on-disk formats, money/number parsing), or when a behaviour has no other
+test. Test logic once, at the lowest layer that owns it; UI tests check only that keys and
+calls are wired. Cosmetic fixes get no new test; check them by hand.
+
+## Project notes
+
+Keep a project's CLAUDE.md or AGENTS.md short: how to work on that project. Design goes in
+its design doc, open items in a backlog file, release history in release commits. A
+folder's own notes go in that folder's CLAUDE.md/AGENTS.md. (opencode reads a project
+CLAUDE.md only when there is no AGENTS.md.)
+
+## Memory
+
+Shared notes for both agents live in `~/.agent/memories/<topic>/<subtopic>.md`. Use only
+this store, not any built-in memory feature.
+
+- Find them with `find ~/.agent/memories -name '*.md'`; `README.md` there has one-line
+  descriptions. When a task touches a topic, read only the files whose path matches it.
+  Do this again when the topic changes.
+- Memories may be out of date. The user's current instructions and what you observe on the
+  machine win; fix or remove a memory you find to be wrong.
+- When the user says "remember …", "don't forget …" or similar, append one line to the
+  best-fitting file, creating it if needed, and tell the user which file you used:
+  `printf -- '- %s: %s\n' "$(date +%F)" '<text>' >> ~/.agent/memories/<topic>/<subtopic>.md`
+  Append with the shell; don't rewrite the file (the other agent may be writing to it).
+- When you create a file, add a line for it under its topic heading in `README.md`.
+- `/remember <text>` (a custom command in both agents) does the same as "remember that <text>".

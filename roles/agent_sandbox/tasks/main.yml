@@ -1,0 +1,35 @@
+---
+- name: Agent sandbox
+  when: agent_sandbox_enable | bool
+  block:
+    - name: Preparation
+      ansible.builtin.import_tasks: preparation.yml
+      tags: [agent_sandbox, always]
+
+    - name: Agent user
+      ansible.builtin.import_tasks: _main/user.yml
+      tags: [agent_sandbox, agent_sandbox_user]
+
+    - name: Agent SSH key
+      ansible.builtin.import_tasks: _main/ssh_key.yml
+      when: agent_sandbox_enable_ssh_key | bool
+      tags: [agent_sandbox, agent_sandbox_ssh_key]
+
+    - name: Agent configs
+      ansible.builtin.import_tasks: _main/configs.yml
+      when: agent_sandbox_enable_configs | bool
+      tags: [agent_sandbox, agent_sandbox_configs]
+
+    - name: Claude Code
+      ansible.builtin.import_tasks: _main/claude.yml
+      when: agent_sandbox_enable_claude | bool
+      tags: [agent_sandbox, agent_sandbox_claude]
+
+    - name: Opencode
+      ansible.builtin.import_tasks: _main/opencode.yml
+      when: agent_sandbox_enable_opencode | bool
+      tags: [agent_sandbox, agent_sandbox_opencode]
+
+    - name: Summary
+      ansible.builtin.import_tasks: _main/summary.yml
+      tags: [agent_sandbox]

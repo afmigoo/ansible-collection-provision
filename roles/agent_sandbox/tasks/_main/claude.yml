@@ -1,0 +1,26 @@
+---
+- name: Check the installed claude version
+  ansible.builtin.shell:
+    cmd: |
+      if [ -x {{ agent_sandbox_home }}/.local/bin/claude ]; then
+        {{ agent_sandbox_home }}/.local/bin/claude --version 2>&1
+      else
+        echo "not-installed"
+      fi
+  become: true
+  become_user: "{{ agent_sandbox_user }}"
+  register: __agent_sandbox_claude_version_check
+  changed_when: false
+  check_mode: false
+
+- name: Install claude via the official install script
+  ansible.builtin.shell:
+    cmd: set -o pipefail && curl -fsSL https://claude.ai/install.sh | bash -s {{ agent_sandbox_claude_version }}
+    executable: /bin/bash
+    chdir: "{{ agent_sandbox_home }}"
+  become: true
+  become_user: "{{ agent_sandbox_user }}"
+  environment:
+    HOME: "{{ agent_sandbox_home }}"
+  when: agent_sandbox_claude_version not in __agent_sandbox_claude_version_check.stdout
+  changed_when: true

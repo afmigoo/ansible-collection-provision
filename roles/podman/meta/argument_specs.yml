@@ -1,0 +1,54 @@
+---
+argument_specs:
+  main:
+    short_description: Install podman and set up rootless users
+    description:
+      - Installs podman, gives each rootless user its own subuid/subgid range and enables lingering.
+      - Users must exist already.
+    author: afmigoo
+    options:
+      podman_enable:
+        type: bool
+        default: false
+        description: Master gate; the role does nothing unless true.
+      podman_enable_rootless:
+        type: bool
+        default: true
+        description: Set up subordinate ids and lingering for podman_rootless_users.
+      podman_packages:
+        type: list
+        elements: str
+        default: [podman, podman-compose, uidmap, acl]
+        description: Packages to install.
+      podman_rootless_users:
+        type: list
+        elements: str
+        default: []
+        description: Existing users that run rootless podman.
+      podman_subid_start:
+        type: int
+        default: 100000
+        description: First subordinate id handed out to users without a range.
+      podman_subid_count:
+        type: int
+        default: 65536
+        description: Size of each user's subordinate id range.
+      podman_linger:
+        type: bool
+        default: true
+        description: Enable systemd lingering for the rootless users.
+  verification:
+    short_description: Verify podman
+    description:
+      - Runs podman info as each rootless user and, with podman_verify_image, a throwaway container.
+    author: afmigoo
+    options:
+      podman_verify_image:
+        type: str
+        default: ""
+        description: Image to run (e.g. docker.io/library/busybox:1.37); empty skips the container run.
+      podman_rootless_users:
+        type: list
+        elements: str
+        default: []
+        description: Users to check.

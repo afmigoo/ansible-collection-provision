@@ -1,0 +1,16 @@
+---
+- name: Update GRUB
+  ansible.builtin.command: update-grub
+  changed_when: true
+
+- name: Reboot for kernel command line changes
+  ansible.builtin.reboot:
+    msg: Reboot for kernel command line changes to take effect
+  when:
+    - harden_reboot | bool
+    - not ansible_check_mode
+
+- name: Reload ufw
+  community.general.ufw:
+    state: reloaded
+  when: not ansible_check_mode

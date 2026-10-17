@@ -1,0 +1,5 @@
+---
+collections:
+  # Used by the vagrant driver of molecule-plugins to create and destroy the VMs
+  - name: community.vagrant
+    version: ">=1.0.1"

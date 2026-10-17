@@ -1,0 +1,13 @@
+---
+# Base setup and hardening of a server: DNS, packages, IPv6 off, devsec SSH
+# hardening, ufw. The first run reboots the host (IPv6 off via GRUB).
+- name: Basic setup and hardening
+  hosts: "{{ provision_hosts | default('all') }}"
+  gather_facts: false
+  become: true
+  vars:
+    base_enable: true
+    harden_enable: true
+  roles:
+    - role: afmigoo.provision.base
+    - role: afmigoo.provision.harden

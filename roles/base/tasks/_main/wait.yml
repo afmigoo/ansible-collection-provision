@@ -1,0 +1,5 @@
+---
+- name: Wait for the host to be reachable
+  ansible.builtin.wait_for_connection:
+    timeout: "{{ base_wait_timeout }}"
+    sleep: 5

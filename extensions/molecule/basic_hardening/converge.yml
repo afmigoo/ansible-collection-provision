@@ -1,0 +1,3 @@
+---
+- name: Converge
+  ansible.builtin.import_playbook: afmigoo.provision.basic_hardening

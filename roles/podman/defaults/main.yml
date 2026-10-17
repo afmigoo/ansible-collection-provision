@@ -1,0 +1,23 @@
+---
+# Master gate, the role does nothing unless enabled
+podman_enable: false
+
+podman_enable_rootless: true
+
+podman_packages:
+  - podman
+  - podman-compose
+  - uidmap
+  # setfacl, so Ansible can become the rootless users (e.g. in the verification)
+  - acl
+
+# Existing users that run rootless podman
+podman_rootless_users: []
+# Subordinate id ranges are handed out from here, one block per user
+podman_subid_start: 100000
+podman_subid_count: 65536
+# Linger keeps a user systemd session for containers after logout
+podman_linger: true
+
+# Verification also runs a throwaway container from this image as each user; empty skips it
+podman_verify_image: ""

@@ -1,0 +1,10 @@
+---
+# Converge with the afmigoo.provision.basic_hardening playbook, check idempotence, then run afmigoo.provision.verify.
+# The toggles below tell the verify playbook which roles to check.
+provisioner:
+  name: ansible
+  inventory:
+    group_vars:
+      all:
+        base_enable: true
+        harden_enable: true

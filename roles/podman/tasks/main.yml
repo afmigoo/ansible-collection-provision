@@ -1,0 +1,16 @@
+---
+- name: Podman
+  when: podman_enable | bool
+  block:
+    - name: Preparation
+      ansible.builtin.import_tasks: preparation.yml
+      tags: [podman, always]
+
+    - name: Install podman
+      ansible.builtin.import_tasks: _main/install.yml
+      tags: [podman, podman_install]
+
+    - name: Rootless users
+      ansible.builtin.import_tasks: _main/rootless.yml
+      when: podman_enable_rootless | bool
+      tags: [podman, podman_rootless]

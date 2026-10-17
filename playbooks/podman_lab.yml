@@ -1,0 +1,29 @@
+---
+# Podman lab: rootless podman for a few unprivileged users.
+- name: Provision a podman lab
+  hosts: "{{ provision_hosts | default('all') }}"
+  gather_facts: false
+  become: true
+  vars:
+    base_enable: true
+    base_upgrade: true
+    podman_enable: true
+    podman_lab_users: [bob, alice, jack]
+    podman_rootless_users: "{{ podman_lab_users }}"
+  roles:
+    - role: afmigoo.provision.base
+  tasks:
+    - name: Create lab users without sudo privileges
+      ansible.builtin.user:
+        name: "{{ __podman_lab_user }}"
+        shell: /bin/bash
+        create_home: true
+      loop: "{{ podman_lab_users }}"
+      loop_control:
+        loop_var: __podman_lab_user
+      tags: [podman_lab]
+
+    - name: Set up rootless podman for the lab users
+      ansible.builtin.include_role:
+        name: afmigoo.provision.podman
+      tags: [podman_lab]

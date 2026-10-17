@@ -1,0 +1,32 @@
+---
+# Workaround for dev-sec/ansible-collection-hardening#941 (fix in PR #986, unreleased in 11.0.0): on Ubuntu
+# 24.04+ ssh_hardening masks ssh.socket and removes these files, but starts ssh.service without a
+# daemon-reload, so systemd still has it requiring the masked socket and sshd never comes back.
+# Removing them and reloading first makes those devsec tasks no-ops. Drop this once the fix is released.
+- name: Remove the ssh socket-activation links before devsec does
+  ansible.builtin.file:
+    path: "{{ __harden_socket_file }}"
+    state: absent
+  loop:
+    - /etc/systemd/system/ssh.service.d/00-socket.conf
+    - /etc/systemd/system/ssh.service.requires/ssh.socket
+    - /etc/systemd/system/sockets.target.wants/ssh.socket
+  loop_control:
+    loop_var: __harden_socket_file
+  register: __harden_socket_links
+
+# Must happen before devsec runs, a handler would be too late
+- name: Reload systemd so ssh.service no longer requires ssh.socket  # noqa: no-handler
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: __harden_socket_links is changed
+
+- name: Apply devsec SSH hardening
+  ansible.builtin.include_role:
+    name: devsec.hardening.ssh_hardening
+  vars:
+    network_ipv6_enable: "{{ not (harden_enable_ipv6_disable | bool) }}"
+    sftp_enabled: "{{ harden_ssh_sftp_enabled }}"
+    ssh_client_password_login: "{{ harden_ssh_password_login }}"
+    ssh_server_password_login: "{{ harden_ssh_password_login }}"
+    ssh_permit_root_login: "{{ harden_ssh_permit_root_login }}"

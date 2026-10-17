@@ -1,0 +1,90 @@
+---
+argument_specs:
+  main:
+    short_description: Set up a Claude Code / opencode agent sandbox
+    description:
+      - Creates the agent user (no sudo) with rootless podman (via afmigoo.provision.podman), installs
+        fish, claude and opencode, the agents' configs, global rules and seed memories, and the agent's git SSH key.
+      - The SSH private key is kept vault-encrypted on the control machine, so run with --ask-vault-pass.
+    author: afmigoo
+    options:
+      agent_sandbox_enable:
+        type: bool
+        default: false
+        description: Master gate; the role does nothing unless true.
+      agent_sandbox_enable_ssh_key:
+        type: bool
+        default: true
+        description: Install the agent's git SSH key.
+      agent_sandbox_enable_configs:
+        type: bool
+        default: true
+        description: Install agent configs, global rules and seed memories.
+      agent_sandbox_enable_claude:
+        type: bool
+        default: true
+        description: Install Claude Code.
+      agent_sandbox_enable_opencode:
+        type: bool
+        default: true
+        description: Install opencode.
+      agent_sandbox_user:
+        type: str
+        default: agent
+        description: Name of the agent user.
+      agent_sandbox_home:
+        type: str
+        default: /home/{{ agent_sandbox_user }}
+        description: Home directory of the agent user.
+      agent_sandbox_host_kind:
+        type: str
+        default: vm
+        choices: [vm, server]
+        description: Kind of host, picks the wording of the agents' global rules.
+      agent_sandbox_server_description:
+        type: str
+        default: a cloud server (Debian)
+        description: Host description in the global rules when the host kind is server.
+      agent_sandbox_rebuild_description:
+        type: str
+        description: How the host gets rebuilt, used in the seeded sandbox memory.
+      agent_sandbox_packages:
+        type: list
+        elements: str
+        description: Packages to install for the agent.
+      agent_sandbox_claude_version:
+        type: str
+        default: "2.1.280"
+        description: Claude Code version.
+      agent_sandbox_opencode_version:
+        type: str
+        default: "1.18.11"
+        description: opencode version.
+      agent_sandbox_ssh_key_dir:
+        type: str
+        default: ""
+        description:
+          - Directory on the control machine with the agent's git SSH key (id_ed25519 vault-encrypted, id_ed25519.pub).
+          - A missing key is generated there; provisioning then stops until it is encrypted.
+  verification:
+    short_description: Verify the agent sandbox
+    description:
+      - Checks that claude and opencode run at the expected versions as the agent user and that it has no sudo rights.
+    author: afmigoo
+    options:
+      agent_sandbox_user:
+        type: str
+        default: agent
+        description: Name of the agent user.
+      agent_sandbox_home:
+        type: str
+        default: /home/{{ agent_sandbox_user }}
+        description: Home directory of the agent user.
+      agent_sandbox_claude_version:
+        type: str
+        default: "2.1.280"
+        description: Expected Claude Code version.
+      agent_sandbox_opencode_version:
+        type: str
+        default: "1.18.11"
+        description: Expected opencode version.

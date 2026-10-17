@@ -1,0 +1,21 @@
+---
+- name: Configure systemd-resolved
+  when: "'systemd-resolved.service' in ansible_facts['services']"
+  block:
+    - name: Ensure resolved.conf.d exists
+      ansible.builtin.file:
+        path: /etc/systemd/resolved.conf.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Set DNS servers
+      ansible.builtin.template:
+        src: etc/systemd/resolved.conf.d/dns.conf.j2
+        dest: /etc/systemd/resolved.conf.d/dns.conf
+        owner: root
+        group: root
+        mode: "0644"
+        lstrip_blocks: true
+      notify: Restart systemd-resolved

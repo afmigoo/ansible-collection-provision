@@ -1,0 +1,33 @@
+---
+namespace: afmigoo
+name: provision
+version: 0.1.0
+readme: README.md
+authors:
+  - afmigoo
+description: Provision, set up and harden Debian and Ubuntu boxes (cloud servers and Vagrant VMs).
+license:
+  - MIT
+tags:
+  - linux
+  - debian
+  - ubuntu
+  - provisioning
+  - hardening
+  - podman
+dependencies:
+  devsec.hardening: ">=11.0.0,<12.0.0"
+  community.general: ">=10.0.0"
+repository: https://github.com/afmigoo/ansible-collection-provision
+build_ignore:
+  - .git
+  - .gitignore
+  - .python-version
+  - requirements.txt
+  - .ansible
+  - .claude
+  - .ansible-lint
+  - .yamllint
+  - "*.tar.gz"
+  - extensions
+  - Makefile

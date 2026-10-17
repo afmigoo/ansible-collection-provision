@@ -1,0 +1,41 @@
+---
+# os_hardening only gathers facts when there are none, but preparation already gathered the min subset;
+# it needs mounts, virtualization_type and selinux on top of that
+- name: Gather the facts os_hardening needs
+  ansible.builtin.setup:
+
+# apport sets fs.suid_dumpable=2 at every boot, undoing os_hardening's 0; CIS also says to disable it
+- name: Remove apport on Ubuntu
+  ansible.builtin.apt:
+    name: apport
+    state: absent
+  when: ansible_facts['distribution'] == 'Ubuntu'
+
+- name: Apply devsec OS hardening
+  ansible.builtin.include_role:
+    name: devsec.hardening.os_hardening
+  vars:
+    # os_hardening templates /etc/default/ufw; keep its IPV6= in line with the ufw tasks
+    ufw_enable_ipv6: "{{ not (harden_enable_ipv6_disable | bool) }}"
+    # Ubuntu boots /var/log as 0775 root:syslog (rsyslog's tmpfiles rule). devsec's Ubuntu vars say 0775 too, but
+    # its "unless defined by user" check also sees the role default 0755, so it enforced 0755 and every reboot
+    # undid it
+    os_mnt_var_log_dir_mode: "{{ '0775' if ansible_facts['distribution'] == 'Ubuntu' else '0755' }}"
+    sysctl_overwrite: >-
+      {{ harden_os_sysctl_overwrite
+         | combine({'kernel.unprivileged_userns_clone': 1} if harden_os_allow_userns | bool else {}) }}
+    # With IPv6 off in the kernel these keys don't exist, and setting them reports a change on every run
+    sysctl_unsupported_entries: >-
+      {{ (sysctl_config | dict2items | map(attribute='key') | select('match', 'net\.ipv6\.') | list)
+         if harden_enable_ipv6_disable | bool else [] }}
+
+# Not every distro's PAM recreates /run/faillock at boot (Ubuntu doesn't), so os_hardening would recreate it
+# after every reboot
+- name: Recreate the faillock tally directory at boot
+  ansible.builtin.template:
+    src: etc/tmpfiles.d/faillock.conf.j2
+    dest: /etc/tmpfiles.d/faillock.conf
+    owner: root
+    group: root
+    mode: "0644"
+    lstrip_blocks: true

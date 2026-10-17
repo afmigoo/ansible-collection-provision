@@ -1,0 +1,9 @@
+# Sandbox {{ _agent_sandbox_host_word }} facts
+
+- 2026-10-13: Login shell is fish; commands given to the user (after `sudo -iu {{ agent_sandbox_user }}`) must be fish syntax.
+- 2026-10-13: Debian's fd-find binary is `fdfind`, not `fd`.
+- 2026-10-13: `claude` is in `~/.local/bin` (added to PATH only in fish config); `opencode` is `/usr/local/bin/opencode`.
+- 2026-10-13: Provisioned only: packages, the SSH key, agent configs, these seed memories. Tool logins (`~/.claude.json`, `~/.local/share/opencode`), tokens, opencode session history and anything not pushed are lost {{ agent_sandbox_rebuild_description }}.
+{% if agent_sandbox_host_kind == 'vm' %}
+- 2026-10-13: Disk discard is passed through to the host; `sudo fstrim -av` (run by the user) returns freed space.
+{% endif %}

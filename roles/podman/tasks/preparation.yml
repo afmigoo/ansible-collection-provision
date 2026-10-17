@@ -1,0 +1,25 @@
+---
+- name: Look up the rootless users
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ __podman_user }}"
+  loop: "{{ podman_rootless_users }}"
+  loop_control:
+    loop_var: __podman_user
+
+- name: Read the unprivileged user namespace switch
+  ansible.builtin.slurp:
+    src: /proc/sys/kernel/unprivileged_userns_clone
+  register: __podman_userns
+  failed_when: false
+  when: podman_rootless_users | length > 0
+
+- name: Check that rootless podman can create user namespaces
+  ansible.builtin.assert:
+    that:
+      - __podman_userns.content is not defined or (__podman_userns.content | b64decode | trim) != '0'
+    fail_msg: >-
+      kernel.unprivileged_userns_clone is 0, so rootless podman cannot start. devsec os_hardening sets it;
+      with afmigoo.provision.harden set harden_os_allow_userns: true.
+    quiet: true
+  when: podman_rootless_users | length > 0

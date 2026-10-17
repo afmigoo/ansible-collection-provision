@@ -1,0 +1,11 @@
+---
+- name: Show how to use the sandbox
+  ansible.builtin.debug:
+    msg:
+      - "agent-sandbox ready: claude v{{ agent_sandbox_claude_version }}, opencode v{{ agent_sandbox_opencode_version }}"
+      - "ssh to {{ inventory_hostname }}, then: sudo -iu {{ agent_sandbox_user }}, and run claude or opencode (log in on first start)"
+      - "agent SSH public key (add to your git host): {{ _agent_sandbox_pubkey }}"
+  vars:
+    _agent_sandbox_pubkey: >-
+      {{ lookup('ansible.builtin.file', agent_sandbox_ssh_key_dir + '/id_ed25519.pub', errors='ignore')
+         if agent_sandbox_enable_ssh_key | bool else 'n/a' }}

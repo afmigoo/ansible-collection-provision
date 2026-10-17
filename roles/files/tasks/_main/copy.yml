@@ -1,0 +1,32 @@
+---
+# A sops-encrypted source (detected in preparation) is copied from the community.sops lookup, anything else (plain
+# or vault-encrypted) with copy, which decrypts vault itself
+- name: Copy the sops-encrypted files
+  ansible.builtin.copy:
+    # rstrip=false keeps the trailing newline. Lookup results are not templated again, so braces stay as they are
+    content: "{{ lookup('community.sops.sops', __files_item.src, rstrip=false) }}"
+    dest: "{{ __files_item.dest }}"
+    owner: "{{ __files_item.owner | default('root') }}"
+    group: "{{ __files_item.group | default('root') }}"
+    mode: "{{ __files_item.mode | default('0600') }}"
+  loop: "{{ files_list }}"
+  loop_control:
+    loop_var: __files_item
+    label: "{{ __files_item.dest }}"
+  when: __files_item.src in _files_sops_srcs
+  register: __files_sops_copy
+  no_log: true
+
+- name: Copy the plain and vault-encrypted files
+  ansible.builtin.copy:
+    src: "{{ __files_item.src }}"
+    dest: "{{ __files_item.dest }}"
+    owner: "{{ __files_item.owner | default('root') }}"
+    group: "{{ __files_item.group | default('root') }}"
+    mode: "{{ __files_item.mode | default('0600') }}"
+  loop: "{{ files_list }}"
+  loop_control:
+    loop_var: __files_item
+    label: "{{ __files_item.dest }}"
+  when: __files_item.src not in _files_sops_srcs
+  register: __files_plain_copy

@@ -1,0 +1,13 @@
+---
+# Master gate, the role does nothing unless enabled
+files_enable: false
+
+# Files to copy from the control machine to the host, e.g.
+#   - src: "{{ inventory_dir }}/../files/app.env"   # absolute path on the control machine
+#     dest: /etc/app/app.env                         # absolute path on the host, its directory must exist
+#     owner: root                                    # default root
+#     group: root                                    # default root
+#     mode: "0600"                                   # default 0600
+# src may be plain, ansible-vault encrypted (run with a vault password) or sops-encrypted (needs the sops binary
+# and its key on the control machine). Sops-encrypted files must be text.
+files_list: []

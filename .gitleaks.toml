@@ -1,0 +1,7 @@
+# Default rules plus an allowlist for the throwaway Molecule test secrets
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Molecule test fixtures: a throwaway age key and vault password that protect nothing"
+paths = ['''^extensions/molecule/fixtures/''']

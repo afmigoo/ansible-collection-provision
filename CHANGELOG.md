@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- New role `files`: copies `files_list` from the control machine to the host. Sources may be plain, ansible-vault or
+  sops-encrypted (detected by content, decrypted with `community.sops`, now a dependency). Every playbook runs it last
+  and `verify` checks it; the `basic_hardening` Molecule scenario covers all three formats.
+
 ## 0.1.0
 
 - Initial release: roles `base`, `harden`, `podman`, `agent_sandbox` and playbooks `basic_hardening`, `agent_sandbox`,

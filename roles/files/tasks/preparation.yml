@@ -1,0 +1,41 @@
+---
+- name: Check the file list
+  ansible.builtin.assert:
+    that:
+      - __files_item.src is defined and __files_item.src is abs
+      - __files_item.dest is defined and __files_item.dest is abs
+    fail_msg: >-
+      files_list entries need absolute src (on the control machine) and dest (on the host) paths, got
+      src={{ __files_item.src | default('') }} dest={{ __files_item.dest | default('') }}
+    quiet: true
+  loop: "{{ files_list }}"
+  loop_control:
+    loop_var: __files_item
+    label: "{{ __files_item.dest | default('') }}"
+
+# Every sops format (yaml, json, dotenv, ini, binary) stores its MAC as ENC[AES256_GCM,...] under a "mac" key, e.g.
+# "mac": "ENC[AES256_GCM,  mac: ENC[AES256_GCM,  sops_mac=ENC[AES256_GCM,  which plain and vault files don't have.
+# grep reads binary files too, where the file lookup would fail
+- name: Detect sops-encrypted sources
+  ansible.builtin.command:
+    argv:
+      - grep
+      - -Eq
+      - 'mac["'']?[[:space:]]*[:=][[:space:]]*["'']?ENC\[AES256_GCM,'
+      - "{{ __files_item.src }}"
+  loop: "{{ files_list }}"
+  loop_control:
+    loop_var: __files_item
+    label: "{{ __files_item.src }}"
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  register: __files_detect
+  changed_when: false
+  failed_when: __files_detect.rc > 1
+  check_mode: false
+
+- name: Remember the sops-encrypted sources
+  ansible.builtin.set_fact:
+    _files_sops_srcs: "{{ __files_detect.results | selectattr('rc', 'eq', 0) | map(attribute='__files_item.src') | list }}"

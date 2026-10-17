@@ -1,0 +1,4 @@
+# Throwaway age key for the Molecule tests only, it protects nothing
+# created: 2026-10-17T23:15:07Z
+# public key: age19hyccnh598xf6kslm24kk49lh4ch0lc5vw9wnlkn5qmpq8x543jsjm966r
+AGE-SECRET-KEY-10Z5Q4CDKU0HWZ2T08AHWVGTUM8R6SD3H3CTDY6SZF5DX8QY7SVNS38M3K2

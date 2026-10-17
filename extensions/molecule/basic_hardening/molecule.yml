@@ -1,10 +1,33 @@
 ---
 # Converge with the afmigoo.provision.basic_hardening playbook, check idempotence, then run afmigoo.provision.verify.
 # The toggles below tell the verify playbook which roles to check.
+# The files role copies a plain, a vault and three sops-encrypted fixtures (yaml, dotenv, text); decrypting them needs
+# the sops binary on the control machine. The fixtures' age key and vault password are throwaway test secrets.
 provisioner:
   name: ansible
+  env:
+    SOPS_AGE_KEY_FILE: ${MOLECULE_SCENARIO_DIRECTORY}/../fixtures/age-key.txt
+  config_options:
+    defaults:
+      vault_password_file: ${MOLECULE_SCENARIO_DIRECTORY}/../fixtures/vault-password
   inventory:
     group_vars:
       all:
         base_enable: true
         harden_enable: true
+        files_enable: true
+        molecule_fixtures: "{{ lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY') }}/../fixtures/files"
+        files_list:
+          - src: "{{ molecule_fixtures }}/plain.txt"
+            dest: /etc/molecule-plain.txt
+            mode: "0644"
+          - src: "{{ molecule_fixtures }}/vault.txt"
+            dest: /etc/molecule-vault.txt
+          - src: "{{ molecule_fixtures }}/sops.yaml"
+            dest: /etc/molecule-sops.yaml
+          - src: "{{ molecule_fixtures }}/sops.env"
+            dest: /etc/molecule-sops.env
+            group: adm
+            mode: "0640"
+          - src: "{{ molecule_fixtures }}/sops.conf"
+            dest: /etc/molecule-sops.conf

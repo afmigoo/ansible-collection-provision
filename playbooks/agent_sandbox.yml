@@ -14,7 +14,10 @@
     # rootless podman for the agent needs unprivileged user namespaces
     harden_os_allow_userns: true
     agent_sandbox_enable: true
+    # Copies nothing unless files_list is set
+    files_enable: true
   roles:
     - role: afmigoo.provision.base
     - role: afmigoo.provision.harden
     - role: afmigoo.provision.agent_sandbox
+    - role: afmigoo.provision.files

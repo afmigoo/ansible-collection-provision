@@ -1,0 +1,21 @@
+---
+# Re-runs the copy in check mode: any change means a file is missing or differs in content, owner, group or mode
+- name: Check the files
+  tags: [files, files_verify]
+  block:
+    - name: Preparation
+      ansible.builtin.import_tasks: preparation.yml
+
+    - name: Re-run the copy in check mode
+      ansible.builtin.import_tasks: _main/copy.yml
+      check_mode: true
+
+    - name: Assert the files
+      ansible.builtin.assert:
+        that: __files_changed | length == 0
+        fail_msg: "Missing or different on the host: {{ __files_changed | join(', ') }}"
+      vars:
+        # Results are in files_list order; the sops results are censored by no_log, so take dest from files_list
+        __files_changed: >-
+          {{ (files_list | zip(__files_sops_copy.results) | selectattr('1.changed') | map(attribute='0.dest') | list)
+             + (files_list | zip(__files_plain_copy.results) | selectattr('1.changed') | map(attribute='0.dest') | list) }}

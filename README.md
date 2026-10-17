@@ -13,6 +13,7 @@ Ansible collection to provision, set up and harden Debian (12, 13) and Ubuntu
 | `afmigoo.provision.harden` | IPv6 off (GRUB drop-in, reboots), `devsec.hardening.os_hardening` and `ssh_hardening`, ufw deny-by-default with ssh and extra ports allowed. Tune the devsec roles with their own `os_*` / `ssh_*` variables |
 | `afmigoo.provision.podman` | Installs podman, gives rootless users non-overlapping subuid/subgid ranges, enables lingering |
 | `afmigoo.provision.agent_sandbox` | `agent` user without sudo, with rootless podman, fish, Claude Code, opencode, their configs, global rules, seed memories and git SSH key |
+| `afmigoo.provision.files` | Copies files from the control machine to the host (`files_list`); sources may be plain, ansible-vault or sops-encrypted |
 
 Every role is opt-in: it does nothing unless `<role>_enable: true`, and has
 `<role>_enable_<subsystem>` toggles for its parts. Options are documented in
@@ -23,9 +24,9 @@ Each role also has a `verification` entry point (`tasks_from: verification`).
 
 | Playbook | Roles |
 |----------|-------|
-| `afmigoo.provision.basic_hardening` | base, harden |
-| `afmigoo.provision.agent_sandbox` | base (with upgrade), harden, agent_sandbox |
-| `afmigoo.provision.podman_lab` | base (with upgrade), podman for lab users `bob`, `alice`, `jack` (`podman_lab_users`) |
+| `afmigoo.provision.basic_hardening` | base, harden, files |
+| `afmigoo.provision.agent_sandbox` | base (with upgrade), harden, agent_sandbox, files |
+| `afmigoo.provision.podman_lab` | base (with upgrade), podman for lab users `bob`, `alice`, `jack` (`podman_lab_users`), files |
 | `afmigoo.provision.verify` | verification of every role enabled for the host |
 
 All playbooks target `all` unless `provision_hosts` is set. They enable their
@@ -70,6 +71,27 @@ ansible-vault encrypt keys/agent-sandbox/id_ed25519   # first run only
 
 `agent_sandbox_host_kind` (`vm` or `server`) picks the wording of the agents'
 global rules (`~/.claude/CLAUDE.md`, `~/.config/opencode/AGENTS.md`).
+
+### Files
+
+Every playbook ends with `afmigoo.provision.files`, which copies `files_list`
+from the control machine to the host (nothing when the list is empty). Sources
+may be plain, ansible-vault encrypted or sops-encrypted; the role tells them
+apart by content.
+
+```yaml
+files_list:
+  - src: "{{ inventory_dir }}/../files/app.env"   # absolute path on the control machine
+    dest: /etc/app/app.env                         # absolute; the directory must exist
+    owner: root                                    # default root
+    group: root                                    # default root
+    mode: "0600"                                   # default 0600
+```
+
+`src` has to be absolute because a collection playbook resolves relative paths
+inside the installed collection. Vault-encrypted sources need a vault password
+(`--ask-vault-pass`); sops-encrypted ones need the `sops` binary and the key to
+decrypt them on the control machine (e.g. `SOPS_AGE_KEY_FILE`), and must be text.
 
 ### Vagrant
 
@@ -120,6 +142,11 @@ make destroy                # clean up after an interrupted run
 Scenarios run sequentially, so a test never uses more than one scenario's four
 VMs (4 vCPU, 6 GiB) at a time. Don't pass `--workers` above 1 on a small host. `agent_sandbox`
 skips the vault-encrypted git SSH key.
+
+`basic_hardening` also copies plain, vault and sops-encrypted files with
+`afmigoo.provision.files`, so it needs the `sops` binary on the control machine.
+Its fixtures in `extensions/molecule/fixtures/` (an age key and a vault password)
+are throwaway test secrets, allowlisted for gitleaks in `.gitleaks.toml`.
 
 Role conventions (variable prefixes, layout, check mode, tags, handlers) follow
 `roles/agent_sandbox/files/agent/memories/ansible/role-conventions.md`.

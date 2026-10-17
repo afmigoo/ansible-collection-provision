@@ -15,13 +15,16 @@ tags:
   - provisioning
   - hardening
   - podman
+  - sops
 dependencies:
   devsec.hardening: ">=11.0.0,<12.0.0"
   community.general: ">=10.0.0"
+  community.sops: ">=2.0.0,<3.0.0"
 repository: https://github.com/afmigoo/ansible-collection-provision
 build_ignore:
   - .git
   - .gitignore
+  - .gitleaks.toml
   - .python-version
   - requirements.txt
   - requirements.yml

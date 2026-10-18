@@ -13,5 +13,3 @@ provisioner:
         podman_rootless_users: [agent]
         podman_verify_image: docker.io/library/busybox:1.37
         agent_sandbox_host_kind: vm
-        # The git SSH key needs a vault password, which a test run does not have
-        agent_sandbox_enable_ssh_key: false

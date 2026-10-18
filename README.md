@@ -58,14 +58,13 @@ ansible-playbook afmigoo.provision.basic_hardening -e '{"harden_ufw_allowed_port
 
 ### Agent sandbox
 
-The agent's git SSH key lives on the control machine in
-`agent_sandbox_ssh_key_dir`. On the first run it is generated and the playbook
-stops until you encrypt it:
+The agent's git SSH key is generated on the host (`~agent/.ssh/id_ed25519`) when
+missing and never leaves it. The run ends by printing its public key; add that
+to the repos the agent should reach (e.g. as a deploy key). Re-provisioning keeps
+the key; a rebuilt host gets a new one.
 
 ```sh
-ansible-playbook afmigoo.provision.agent_sandbox --ask-vault-pass \
-  -e agent_sandbox_ssh_key_dir=$PWD/keys/agent-sandbox -e agent_sandbox_host_kind=server
-ansible-vault encrypt keys/agent-sandbox/id_ed25519   # first run only
+ansible-playbook afmigoo.provision.agent_sandbox -e agent_sandbox_host_kind=server
 ```
 
 `agent_sandbox_host_kind` (`vm` or `server`) picks the wording of the agents'
@@ -77,10 +76,8 @@ global rules (`~/.claude/CLAUDE.md`, `~/.config/opencode/AGENTS.md`).
 deb13.vm.provision "ansible" do |ansible|
   ansible.compatibility_mode = "2.0"
   ansible.playbook = "playbook.yml"  # - ansible.builtin.import_playbook: afmigoo.provision.agent_sandbox
-  ansible.ask_vault_pass = true
   ansible.become = true
   ansible.extra_vars = {
-    agent_sandbox_ssh_key_dir: "#{__dir__}/keys/agent-sandbox",
     harden_enable: false,
   }
 end
@@ -118,8 +115,7 @@ make destroy                # clean up after an interrupted run
 ```
 
 Scenarios run sequentially, so a test never uses more than one scenario's four
-VMs (4 vCPU, 6 GiB) at a time. Don't pass `--workers` above 1 on a small host. `agent_sandbox`
-skips the vault-encrypted git SSH key.
+VMs (4 vCPU, 6 GiB) at a time. Don't pass `--workers` above 1 on a small host.
 
 Role conventions (variable prefixes, layout, check mode, tags, handlers) follow
 `roles/agent_sandbox/files/agent/memories/ansible/role-conventions.md`.

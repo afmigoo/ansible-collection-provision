@@ -124,13 +124,9 @@
           - ansible_check_mode or (_files_group_ok | bool)
           - ansible_check_mode or (_files_dir_ok | bool)
         fail_msg: >-
-          {{ __files_item.dest }} on the host:
-          {{ ((['it is a directory'] if _files_is_dir | bool else [])
-              + (['it is a symlink'] if _files_is_link | bool else [])
-              + ([] if _files_owner_ok | bool else ['owner ' ~ __files_item.owner | default('root') ~ ' does not exist'])
-              + ([] if _files_group_ok | bool else ['group ' ~ __files_item.group | default('root') ~ ' does not exist'])
-              + ([] if _files_dir_ok | bool else ['directory ' ~ __files_item.dest | dirname ~ ' does not exist']))
-             | join(', ') }}
+          {{ __files_item.dest }} must not be a directory or a symlink, and its owner
+          {{ __files_item.owner | default('root') }}, group {{ __files_item.group | default('root') }} and directory
+          {{ __files_item.dest | dirname }} must exist on the host
         quiet: true
       vars:
         # file would follow a link and change its target's owner and mode, copy would replace the link

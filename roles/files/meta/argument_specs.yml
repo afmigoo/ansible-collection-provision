@@ -28,7 +28,7 @@ argument_specs:
           dest:
             type: str
             required: true
-            description: Absolute path on the host; its directory must exist. No two entries may share it.
+            description: Absolute path of a file on the host (not a directory or symlink); its directory must exist. No two entries may share it.
           owner:
             type: str
             default: root

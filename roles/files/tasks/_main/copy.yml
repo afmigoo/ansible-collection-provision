@@ -65,4 +65,5 @@
       ansible.builtin.fail:
         msg: >-
           Copying the files failed, see the error above. Removed the files this run had created:
-          {{ _files_new_dests | join(', ') if _files_new_dests and not ansible_check_mode else 'none' }}
+          {{ _files_new_dests | join(', ')
+             if _files_new_dests and not (ansible_check_mode or _files_verifying | default(false)) else 'none' }}

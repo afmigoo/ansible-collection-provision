@@ -82,7 +82,7 @@ apart by content.
 ```yaml
 files_list:
   - src: "{{ inventory_dir }}/../files/app.env"   # absolute path on the control machine
-    dest: /etc/app/app.env                         # absolute; the directory must exist
+    dest: /etc/app/app.env                         # absolute file path (no directory or symlink); its directory must exist
     owner: root                                    # default root
     group: root                                    # default root
     mode: "0600"                                   # default 0600

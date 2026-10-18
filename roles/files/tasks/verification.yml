@@ -6,9 +6,12 @@
     - name: Preparation
       ansible.builtin.import_tasks: preparation.yml
 
+    # check_mode here doesn't set ansible_check_mode, so tell the copy's failure message
     - name: Re-run the copy in check mode
       ansible.builtin.import_tasks: _main/copy.yml
       check_mode: true
+      vars:
+        _files_verifying: true
 
     - name: Assert the files
       ansible.builtin.assert:

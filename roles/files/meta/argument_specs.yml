@@ -1,0 +1,50 @@
+---
+argument_specs:
+  main:
+    short_description: Copy files to the host
+    description:
+      - Copies files from the control machine to the host. A source may be plain, ansible-vault encrypted or
+        sops-encrypted; the format is detected from its content.
+      - Sops-encrypted sources are decrypted with the community.sops lookup, which needs the sops binary and the
+        decryption key on the control machine. Vault-encrypted sources need a vault password.
+      - Checks the sources, owners, groups and destination directories before copying, creates new files with their
+        owner and mode before writing content, and never shows diffs.
+    author: afmigoo
+    options: &files_options
+      files_enable:
+        type: bool
+        default: false
+        description: Master gate; the role does nothing unless true.
+      files_list:
+        type: list
+        elements: dict
+        default: []
+        description: Files to copy.
+        options:
+          src:
+            type: str
+            required: true
+            description: Absolute path of the source on the control machine.
+          dest:
+            type: str
+            required: true
+            description: Absolute path of a file on the host (not a directory or symlink); its directory must exist. No two entries may share it.
+          owner:
+            type: str
+            default: root
+            description: Owner of the file on the host.
+          group:
+            type: str
+            default: root
+            description: Group of the file on the host.
+          mode:
+            type: str
+            default: "0600"
+            description: Mode of the file on the host, quoted (e.g. "0640").
+  verification:
+    short_description: Verify the copied files
+    description:
+      - Checks that every file in files_list is on the host with its content, owner, group and mode, by running the
+        copy in check mode.
+    author: afmigoo
+    options: *files_options

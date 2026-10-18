@@ -33,3 +33,10 @@
         tasks_from: verification
       when: agent_sandbox_enable | default(false) | bool
       tags: [verify]
+
+    - name: Verify files
+      ansible.builtin.include_role:
+        name: afmigoo.provision.files
+        tasks_from: verification
+      when: files_enable | default(false) | bool
+      tags: [verify]

@@ -5,6 +5,11 @@
 - `agent_sandbox`: the agent's git SSH key is generated on the host when missing instead of being copied from the
   control machine, and its public key is printed at the end. `agent_sandbox_ssh_key_dir` is gone and runs no longer
   need a vault password. The verification checks the key.
+- New role `files`: copies `files_list` from the control machine to the host. Sources may be plain, ansible-vault or
+  sops-encrypted (detected by content, decrypted with `community.sops`, now a dependency). It checks sources, owners,
+  groups and destination directories first, creates new files with their owner and mode before writing content, and
+  never shows diffs. Every playbook runs it last and `verify` checks it; a new `files` Molecule scenario covers
+  all three formats and checks the fixture contents.
 - `agent_sandbox`: installs `make`, `gh`, `glab`, `age`, `python3-venv` and `pipx`, and sops from the upstream
   release binary (`agent_sandbox_enable_sops`, `agent_sandbox_sops_version`, checked against the release
   checksums). The global rules tell the agents to use pipx and project venvs for Python tools.

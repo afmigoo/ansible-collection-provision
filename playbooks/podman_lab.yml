@@ -10,6 +10,8 @@
     podman_enable: true
     podman_lab_users: [bob, alice, jack]
     podman_rootless_users: "{{ podman_lab_users }}"
+    # Copies nothing unless files_list is set
+    files_enable: true
   roles:
     - role: afmigoo.provision.base
   tasks:
@@ -27,3 +29,10 @@
       ansible.builtin.include_role:
         name: afmigoo.provision.podman
       tags: [podman_lab]
+
+    - name: Copy files
+      ansible.builtin.include_role:
+        name: afmigoo.provision.files
+        apply:
+          tags: [files]
+      tags: [files, files_copy]

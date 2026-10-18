@@ -6,3 +6,5 @@ collections:
     version: 11.0.0
   - name: community.general
     version: 13.5.0
+  - name: community.sops
+    version: 2.5.0

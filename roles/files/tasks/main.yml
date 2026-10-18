@@ -1,0 +1,11 @@
+---
+- name: Files
+  when: files_enable | bool
+  block:
+    - name: Preparation
+      ansible.builtin.import_tasks: preparation.yml
+      tags: [files, always]
+
+    - name: Copy the files
+      ansible.builtin.import_tasks: _main/copy.yml
+      tags: [files, files_copy]

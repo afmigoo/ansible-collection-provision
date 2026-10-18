@@ -139,7 +139,8 @@ for secrets (gitleaks) and workflow problems (actionlint, zizmor). The Molecule 
 ### Molecule tests
 
 `extensions/molecule/` has one scenario per playbook (`basic_hardening`,
-`podman_lab`, `agent_sandbox`). Each boots four VMs with vagrant-libvirt,
+`podman_lab`, `agent_sandbox`) and one for the `files` role, which no playbook
+exercises on its own. Each boots four VMs with vagrant-libvirt,
 Debian 12 and 13 (1 vCPU, 1 GiB) and Ubuntu 24.04 and 26.04 (1 vCPU, 2 GiB), runs
 converge, idempotence, then `afmigoo.provision.verify` on all of them at once,
 and destroys them.
@@ -153,9 +154,8 @@ make destroy                # clean up after an interrupted run
 Scenarios run sequentially, so a test never uses more than one scenario's four
 VMs (4 vCPU, 6 GiB) at a time. Don't pass `--workers` above 1 on a small host.
 
-`basic_hardening` also copies plain, vault and sops-encrypted files with
-`afmigoo.provision.files`, so it needs the `sops` binary on the control machine.
-Its fixtures in `extensions/molecule/fixtures/` (an age key and a vault password)
+`files` copies plain, vault and sops-encrypted fixtures and checks their
+contents, so it needs the `sops` binary on the control machine. Its fixtures in `extensions/molecule/fixtures/` (an age key and a vault password)
 are throwaway test secrets, allowlisted for gitleaks in `.gitleaks.toml`.
 
 Role conventions (variable prefixes, layout, check mode, tags, handlers) follow

@@ -3,11 +3,11 @@
   ansible.builtin.assert:
     that:
       - __files_item.src is defined and __files_item.src is abs
-      - __files_item.dest is defined and __files_item.dest is abs
+      - __files_item.dest is defined and __files_item.dest is abs and not __files_item.dest.endswith('/')
       - __files_item.mode is not defined or __files_item.mode is string
       - files_list | map(attribute='dest') | select('eq', __files_item.dest) | list | length == 1
     fail_msg: >-
-      files_list entries need absolute src (on the control machine) and dest (on the host) paths, a quoted mode
+      files_list entries need absolute src (on the control machine) and dest (on the host, a file path) paths, a quoted mode
       (e.g. "0640") and a dest no other entry uses, got src={{ __files_item.src | default('') }}
       dest={{ __files_item.dest | default('') }} mode={{ __files_item.mode | default('') }}
     quiet: true
@@ -25,6 +25,7 @@
     - name: Stat the sources
       ansible.builtin.stat:
         path: "{{ __files_item.src }}"
+        follow: true
         get_checksum: false
       loop: "{{ files_list }}"
       loop_control:
@@ -43,15 +44,16 @@
         index_var: __files_index
         label: "{{ __files_item.src }}"
 
-    # Every sops format (json/binary, yaml, dotenv, ini) writes its metadata one key per line, among them the MAC as
-    # ENC[AES256_GCM,...] and lastmodified, e.g.  "mac": "ENC[AES256_GCM,  mac: ENC[AES256_GCM,  sops_mac=ENC[...
-    # Requiring both lines keeps plain files that merely quote a MAC out. grep reads binary files too
+    # Every sops format writes its metadata keys, among them the MAC as ENC[AES256_GCM,...] and lastmodified:
+    # json/binary "mac": "ENC[AES256_GCM,  (any whitespace, also minified), and one key per line in yaml
+    # mac: ENC[AES256_GCM,  dotenv sops_mac=ENC[AES256_GCM,  ini mac = ENC[AES256_GCM,
+    # Requiring both keeps plain files that merely quote a MAC out. grep reads binary files too
     - name: Find sources with a sops MAC
       ansible.builtin.command:
         argv:
           - grep
           - -Eq
-          - '^[[:space:]]*("mac": "|mac: |sops_mac=|mac[[:space:]]*=[[:space:]]*)ENC\[AES256_GCM,'
+          - '"mac"[[:space:]]*:[[:space:]]*"ENC\[AES256_GCM,|^[[:space:]]*(mac: |sops_mac=|mac[[:space:]]*=[[:space:]]*)ENC\[AES256_GCM,'
           - "{{ __files_item.src }}"
       loop: "{{ files_list }}"
       loop_control:
@@ -67,7 +69,7 @@
         argv:
           - grep
           - -Eq
-          - '^[[:space:]]*("lastmodified": "|lastmodified: |sops_lastmodified=|lastmodified[[:space:]]*=[[:space:]]*)'
+          - '"lastmodified"[[:space:]]*:[[:space:]]*"|^[[:space:]]*(lastmodified: |sops_lastmodified=|lastmodified[[:space:]]*=[[:space:]]*)'
           - "{{ __files_item.src }}"
       loop: "{{ files_list }}"
       loop_control:
@@ -123,14 +125,29 @@
         label: "{{ __files_item.dest | dirname }}"
       register: __files_dest_dir
 
+    - name: Stat the destinations
+      ansible.builtin.stat:
+        path: "{{ __files_item.dest }}"
+        get_checksum: false
+      loop: "{{ files_list }}"
+      loop_control:
+        loop_var: __files_item
+        label: "{{ __files_item.dest }}"
+      register: __files_dest
+
+    # Numeric owners and groups need no passwd or group entry
     - name: Assert the destinations
       ansible.builtin.assert:
-        that: >-
-          ansible_check_mode or (__files_owner.results[__files_index].rc == 0
-          and __files_group.results[__files_index].rc == 0
-          and __files_dest_dir.results[__files_index].stat.isdir | default(false))
+        that:
+          - not (__files_dest.results[__files_index].stat.isdir | default(false))
+          - >-
+            ansible_check_mode or ((__files_owner.results[__files_index].rc == 0
+            or __files_item.owner | default('root') | string is match('^[0-9]+$'))
+            and (__files_group.results[__files_index].rc == 0
+            or __files_item.group | default('root') | string is match('^[0-9]+$'))
+            and __files_dest_dir.results[__files_index].stat.isdir | default(false))
         fail_msg: >-
-          {{ __files_item.dest }}: the owner {{ __files_item.owner | default('root') }}, the group
+          {{ __files_item.dest }}: it is a directory, or the owner {{ __files_item.owner | default('root') }}, the group
           {{ __files_item.group | default('root') }} or the directory {{ __files_item.dest | dirname }} doesn't exist
           on the host
         quiet: true
@@ -139,3 +156,8 @@
         loop_var: __files_item
         index_var: __files_index
         label: "{{ __files_item.dest }}"
+
+- name: Remember the destinations this run creates
+  ansible.builtin.set_fact:
+    _files_new_dests: >-
+      {{ files_list | zip(__files_dest.results) | rejectattr('1.stat.exists') | map(attribute='0.dest') | list }}

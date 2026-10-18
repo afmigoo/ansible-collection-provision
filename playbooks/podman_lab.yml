@@ -35,4 +35,4 @@
         name: afmigoo.provision.files
         apply:
           tags: [files]
-      tags: [files]
+      tags: [files, files_copy]

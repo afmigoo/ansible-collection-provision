@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
 - `agent_sandbox`: the agent's git SSH key is generated on the host when missing instead of being copied from the
   control machine, and its public key is printed at the end. `agent_sandbox_ssh_key_dir` is gone and runs no longer

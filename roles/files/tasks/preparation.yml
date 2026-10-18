@@ -135,11 +135,24 @@
         label: "{{ __files_item.dest }}"
       register: __files_dest
 
+    # The stat above doesn't follow links, so a link that already exists is never taken for a new file; this one
+    # does, so a link to a directory counts as a directory
+    - name: Stat the destinations, following links
+      ansible.builtin.stat:
+        path: "{{ __files_item.dest }}"
+        follow: true
+        get_checksum: false
+      loop: "{{ files_list }}"
+      loop_control:
+        loop_var: __files_item
+        label: "{{ __files_item.dest }}"
+      register: __files_dest_followed
+
     # Numeric owners and groups need no passwd or group entry
     - name: Assert the destinations
       ansible.builtin.assert:
         that:
-          - not (__files_dest.results[__files_index].stat.isdir | default(false))
+          - not (__files_dest_followed.results[__files_index].stat.isdir | default(false))
           - >-
             ansible_check_mode or ((__files_owner.results[__files_index].rc == 0
             or __files_item.owner | default('root') | string is match('^[0-9]+$'))

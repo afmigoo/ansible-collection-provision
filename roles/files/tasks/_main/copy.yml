@@ -1,24 +1,24 @@
 ---
-# A new file gets its owner and mode before any content: copy would otherwise create it world-readable and only then
-# chmod it. Times are preserved, so an existing file stays unchanged when its owner and mode are right
-- name: Create missing files with their owner and mode
-  ansible.builtin.file:
-    path: "{{ __files_item.dest }}"
-    state: touch
-    owner: "{{ __files_item.owner | default('root') }}"
-    group: "{{ __files_item.group | default('root') }}"
-    mode: "{{ __files_item.mode | default('0600') }}"
-    modification_time: preserve
-    access_time: preserve
-  loop: "{{ files_list }}"
-  loop_control:
-    loop_var: __files_item
-    label: "{{ __files_item.dest }}"
-
-# If a copy fails (e.g. no sops key or vault password), remove the files this run created, so no empty file is left
-# where a service expects content
+# If anything fails (e.g. no sops key or vault password), remove the files this run created, so no empty file is left
+# where a service expects content. Entries that existed before keep whatever this run already wrote to them
 - name: Copy the content
   block:
+    # A new file gets its owner and mode before any content: copy would otherwise create it world-readable and only then
+    # chmod it. Times are preserved, so an existing file stays unchanged when its owner and mode are right
+    - name: Create missing files with their owner and mode
+      ansible.builtin.file:
+        path: "{{ __files_item.dest }}"
+        state: touch
+        owner: "{{ __files_item.owner | default('root') }}"
+        group: "{{ __files_item.group | default('root') }}"
+        mode: "{{ __files_item.mode | default('0600') }}"
+        modification_time: preserve
+        access_time: preserve
+      loop: "{{ files_list }}"
+      loop_control:
+        loop_var: __files_item
+        label: "{{ __files_item.dest }}"
+
     # A sops-encrypted source (detected in preparation) is copied from the community.sops lookup, anything else (plain
     # or vault-encrypted) with copy, which decrypts vault itself. No diffs: they would show the decrypted content
     - name: Copy the sops-encrypted files
@@ -65,4 +65,4 @@
       ansible.builtin.fail:
         msg: >-
           Copying the files failed, see the error above. Removed the files this run had created:
-          {{ _files_new_dests | join(', ') if _files_new_dests else 'none' }}
+          {{ _files_new_dests | join(', ') if _files_new_dests and not ansible_check_mode else 'none' }}

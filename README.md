@@ -103,7 +103,9 @@ decrypt them on the control machine (e.g. `SOPS_AGE_KEY_FILE`).
 - The role checks the sources, owners, groups and destination directories
   before copying, creates new files with their owner and mode before writing
   content, and never shows diffs (`--diff`), so decrypted content stays out of
-  the output.
+  the output. If a copy fails (e.g. no sops key or vault password), the files
+  that run created are removed again; files that existed before may already
+  have their new content.
 
 ### Vagrant
 

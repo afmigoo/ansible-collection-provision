@@ -1,0 +1,12 @@
+# Nested Vagrant without root: VMs run in the user's libvirt session and join the system
+# libvirt's default network through the setuid qemu-bridge-helper (allowed in /etc/qemu/bridge.conf)
+Vagrant.configure("2") do |config|
+  # NFS and the other synced folder types need root on this side
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.provider :libvirt do |libvirt|
+    libvirt.qemu_use_session = true
+    libvirt.uri = "qemu:///session"
+    libvirt.system_uri = "qemu:///system"
+    libvirt.management_network_device = "virbr0"
+  end
+end

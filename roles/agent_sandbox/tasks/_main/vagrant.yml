@@ -1,0 +1,86 @@
+---
+- name: Install Vagrant and libvirt
+  ansible.builtin.apt:
+    name:
+      - vagrant
+      - vagrant-libvirt
+      - libvirt-daemon-system
+      - qemu-utils
+      - "{{ 'qemu-system-arm' if ansible_facts['architecture'] == 'aarch64' else 'qemu-system-x86' }}"
+    state: present
+
+# The system libvirt only provides the virbr0 bridge; the agent has no access to it and
+# runs its VMs in its own libvirt session
+- name: Check the libvirt default network
+  ansible.builtin.command: virsh --connect qemu:///system net-info default
+  register: __agent_sandbox_net
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Autostart the libvirt default network
+  ansible.builtin.command: virsh --connect qemu:///system net-autostart default
+  when: __agent_sandbox_net.stdout is not search('Autostart:\s+yes')
+  changed_when: true
+
+# The default network's 192.168.122.0/24 can collide with the host's own network, e.g. a VM made with
+# virt-manager's default network, and libvirt then refuses to start it
+- name: Start the libvirt default network
+  when: __agent_sandbox_net.stdout is not search('Active:\s+yes')
+  block:
+    - name: Start the libvirt default network
+      ansible.builtin.command: virsh --connect qemu:///system net-start default
+      register: __agent_sandbox_net_start
+      changed_when: true
+  rescue:
+    - name: Explain the failed network start
+      ansible.builtin.fail:
+        msg: >-
+          libvirt's default network didn't start: {{ __agent_sandbox_net_start.stderr | default('') | trim }}.
+          If its subnet is already in use on this host, give it another one with
+          `virsh net-edit default` (e.g. 192.168.123.0/24) and run again.
+
+- name: Ensure /etc/qemu exists
+  ansible.builtin.file:
+    path: /etc/qemu
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Allow session VMs to join virbr0 and nothing else
+  ansible.builtin.copy:
+    content: "allow virbr0\n"
+    dest: /etc/qemu/bridge.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+# A stat override survives qemu upgrades, a plain chmod would not
+- name: Check the bridge helper's stat override
+  ansible.builtin.command: dpkg-statoverride --list /usr/lib/qemu/qemu-bridge-helper
+  register: __agent_sandbox_statoverride
+  changed_when: false
+  failed_when: __agent_sandbox_statoverride.rc > 1
+  check_mode: false
+
+- name: Make the bridge helper setuid root
+  ansible.builtin.command: dpkg-statoverride --update --add root root 4755 /usr/lib/qemu/qemu-bridge-helper
+  when: __agent_sandbox_statoverride.rc == 1
+  changed_when: true
+
+- name: Ensure ~/.vagrant.d exists
+  ansible.builtin.file:
+    path: "{{ agent_sandbox_home }}/.vagrant.d"
+    state: directory
+    owner: "{{ agent_sandbox_user }}"
+    group: "{{ agent_sandbox_user }}"
+    mode: "0755"
+
+- name: Install the agent's Vagrant defaults
+  ansible.builtin.copy:
+    src: agent/vagrant-Vagrantfile
+    dest: "{{ agent_sandbox_home }}/.vagrant.d/Vagrantfile"
+    owner: "{{ agent_sandbox_user }}"
+    group: "{{ agent_sandbox_user }}"
+    mode: "0644"

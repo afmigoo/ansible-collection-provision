@@ -6,14 +6,21 @@
     update_cache: true
     cache_valid_time: 3600
 
+- name: Ensure the kvm group exists
+  ansible.builtin.group:
+    name: kvm
+    system: true
+  when: agent_sandbox_enable_vagrant | bool
+
 - name: Create the agent user
   ansible.builtin.user:
     name: "{{ agent_sandbox_user }}"
     home: "{{ agent_sandbox_home }}"
     shell: /usr/bin/fish
     create_home: true
-    # No supplementary groups, in particular not sudo: the agent owns its home and nothing else
-    groups: []
+    # No supplementary groups, in particular not sudo: the agent owns its home and nothing else.
+    # kvm only opens /dev/kvm for Vagrant's VMs.
+    groups: "{{ ['kvm'] if agent_sandbox_enable_vagrant | bool else [] }}"
     append: false
 
 # The same mode devsec os_hardening enforces on regular users' homes, which runs before this user exists

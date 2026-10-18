@@ -10,6 +10,11 @@
       ansible.builtin.import_tasks: _main/user.yml
       tags: [agent_sandbox, agent_sandbox_user]
 
+    - name: Vagrant
+      ansible.builtin.import_tasks: _main/vagrant.yml
+      when: agent_sandbox_enable_vagrant | bool
+      tags: [agent_sandbox, agent_sandbox_vagrant]
+
     - name: Agent SSH key
       ansible.builtin.import_tasks: _main/ssh_key.yml
       when: agent_sandbox_enable_ssh_key | bool
@@ -29,6 +34,11 @@
       ansible.builtin.import_tasks: _main/opencode.yml
       when: agent_sandbox_enable_opencode | bool
       tags: [agent_sandbox, agent_sandbox_opencode]
+
+    - name: Sops
+      ansible.builtin.import_tasks: _main/sops.yml
+      when: agent_sandbox_enable_sops | bool
+      tags: [agent_sandbox, agent_sandbox_sops]
 
     - name: Summary
       ansible.builtin.import_tasks: _main/summary.yml

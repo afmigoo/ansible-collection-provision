@@ -5,6 +5,12 @@
 - `agent_sandbox`: the agent's git SSH key is generated on the host when missing instead of being copied from the
   control machine, and its public key is printed at the end. `agent_sandbox_ssh_key_dir` is gone and runs no longer
   need a vault password. The verification checks the key.
+- `agent_sandbox`: installs `make`, `gh`, `glab`, `age`, `python3-venv` and `pipx`, and sops from the upstream
+  release binary (`agent_sandbox_enable_sops`, `agent_sandbox_sops_version`, checked against the release
+  checksums). The global rules tell the agents to use pipx and project venvs for Python tools.
+- `agent_sandbox_enable_vagrant` (off by default, Debian only): Vagrant with vagrant-libvirt in the agent's own libvirt
+  session. The agent joins `kvm`, `qemu-bridge-helper` is setuid root (a dpkg stat override) and limited to `virbr0`,
+  and `~/.vagrant.d/Vagrantfile` sets up session mode without synced folders. The verification checks the setup.
 
 ## 0.1.0
 

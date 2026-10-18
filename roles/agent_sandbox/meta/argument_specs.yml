@@ -61,11 +61,25 @@ argument_specs:
         type: str
         default: "1.18.11"
         description: opencode version.
+      agent_sandbox_enable_vagrant:
+        type: bool
+        default: false
+        description:
+          - Install Vagrant and vagrant-libvirt for VMs in the agent's own libvirt session (Debian only).
+          - Adds the agent to the kvm group and makes qemu-bridge-helper setuid root, limited to virbr0 by /etc/qemu/bridge.conf.
+      agent_sandbox_enable_sops:
+        type: bool
+        default: true
+        description: Install sops to /usr/local/bin from the upstream release binary.
+      agent_sandbox_sops_version:
+        type: str
+        default: "3.13.3"
+        description: sops version.
   verification:
     short_description: Verify the agent sandbox
     description:
-      - Checks that claude and opencode run at the expected versions as the agent user, that it has no sudo rights and
-        that its git SSH key is valid.
+      - Checks that claude, opencode and sops run at the expected versions as the agent user, that it has no sudo
+        rights, that its git SSH key is valid, and the Vagrant setup when enabled.
     author: afmigoo
     options:
       agent_sandbox_enable_ssh_key:
@@ -88,3 +102,15 @@ argument_specs:
         type: str
         default: "1.18.11"
         description: Expected opencode version.
+      agent_sandbox_enable_vagrant:
+        type: bool
+        default: false
+        description: Check Vagrant.
+      agent_sandbox_enable_sops:
+        type: bool
+        default: true
+        description: Check sops.
+      agent_sandbox_sops_version:
+        type: str
+        default: "3.13.3"
+        description: Expected sops version.

@@ -26,6 +26,18 @@ Claude Code (`claude`) and opencode (`opencode`) both run as `agent` and share t
 its repos, the SSH key and `~/.agent/memories`. Another agent may have used the same
 checkout: run `git status` before assuming the working tree is yours.
 
+Install Python tools into your home with `pipx install <tool>` and give a project its own
+`python3 -m venv .venv`; there is no system pip. `gh` and `glab` need a login or a token
+from the user (`GH_TOKEN`, `GITLAB_TOKEN`).
+{% if agent_sandbox_enable_vagrant | bool %}
+
+Vagrant (vagrant-libvirt) runs VMs in your own libvirt session (`qemu:///session`); the
+provisioned `~/.vagrant.d/Vagrantfile` sets that up for every project, joins the VMs to the
+`virbr0` NAT network and disables synced folders (they need root). The VMs share this
+{{ _agent_sandbox_host_word }}'s CPUs and memory: check `free -h`, run few at a time and
+`vagrant destroy -f` when done.
+{% endif %}
+
 This file is provisioned (as `~/.claude/CLAUDE.md` and `~/.config/opencode/AGENTS.md`)
 and overwritten on every provision. To change global rules, write the proposed text to
 `~/handoff-vm-manager.md` and tell the user; don't edit this file.
@@ -51,7 +63,7 @@ The server's disk is small and fixed; filling it breaks the server.
 {% endif %}
 - Run `df -h /` before container image builds or large builds.
 - Remove superseded images; after an interrupted build run `podman image prune -f` and
-  `rm -rf /var/tmp/buildah*`.
+  `podman unshare rm -rf /var/tmp/buildah*`.
 - Keep build output inside the project and prune incremental caches that grow past ~10 GB.
 {% if agent_sandbox_host_kind == 'vm' %}
 - After deleting a lot, ask the user to run `sudo fstrim -av` so the host gets the space back.

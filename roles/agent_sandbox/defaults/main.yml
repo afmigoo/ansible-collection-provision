@@ -7,6 +7,11 @@ agent_sandbox_enable_ssh_key: true
 agent_sandbox_enable_configs: true
 agent_sandbox_enable_claude: true
 agent_sandbox_enable_opencode: true
+agent_sandbox_enable_sops: true
+# Vagrant with vagrant-libvirt in the agent's own libvirt session (Debian only, Ubuntu doesn't
+# package Vagrant). Adds the agent to the kvm group and makes qemu-bridge-helper setuid root,
+# limited to virbr0. Needs nested virtualization when the host is itself a VM.
+agent_sandbox_enable_vagrant: false
 
 agent_sandbox_user: agent
 agent_sandbox_home: "/home/{{ agent_sandbox_user }}"
@@ -32,6 +37,15 @@ agent_sandbox_packages:
   - acl
   # ssh-keygen for the agent's git SSH key
   - openssh-client
+  - make
+  - gh
+  - glab
+  - age
+  # Python tools go into project venvs or pipx, there is no system pip for the agent
+  - python3-venv
+  - pipx
 
 agent_sandbox_claude_version: "2.1.280"
 agent_sandbox_opencode_version: "1.18.11"
+# Installed from the upstream release binary, Debian and Ubuntu have no sops package
+agent_sandbox_sops_version: "3.13.3"

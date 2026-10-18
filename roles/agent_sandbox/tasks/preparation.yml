@@ -7,9 +7,19 @@
   ansible.builtin.assert:
     that:
       - ansible_facts['os_family'] == 'Debian'
-    fail_msg: Needs Debian (got {{ ansible_facts['os_family'] }}).
+      - ansible_facts['distribution'] == 'Debian' or not (agent_sandbox_enable_vagrant | bool)
+    fail_msg: >-
+      Needs Debian (got {{ ansible_facts['os_family'] }}). agent_sandbox_enable_vagrant needs Debian itself (got
+      {{ ansible_facts['distribution'] }}), Ubuntu doesn't package Vagrant.
     quiet: true
 
 - name: Set host wording
   ansible.builtin.set_fact:
     _agent_sandbox_host_word: "{{ 'VM' if agent_sandbox_host_kind == 'vm' else 'server' }}"
+
+- name: Set the sops download source
+  ansible.builtin.set_fact:
+    _agent_sandbox_sops_url: "https://github.com/getsops/sops/releases/download/v{{ agent_sandbox_sops_version }}"
+    _agent_sandbox_sops_file: >-
+      sops-v{{ agent_sandbox_sops_version }}.linux.{{ {'x86_64': 'amd64', 'aarch64': 'arm64'}[ansible_facts['architecture']] }}
+  when: agent_sandbox_enable_sops | bool

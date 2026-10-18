@@ -1,0 +1,12 @@
+---
+# The release checksums cover the binaries, not the .deb packages. No `creates`, so a
+# version change replaces the old binary (get_url compares the checksum).
+- name: Install the sops binary
+  ansible.builtin.get_url:
+    url: "{{ _agent_sandbox_sops_url }}/{{ _agent_sandbox_sops_file }}"
+    checksum: "sha256:{{ _agent_sandbox_sops_url }}/sops-v{{ agent_sandbox_sops_version }}.checksums.txt"
+    dest: /usr/local/bin/sops
+    owner: root
+    group: root
+    mode: "0755"
+  when: not ansible_check_mode

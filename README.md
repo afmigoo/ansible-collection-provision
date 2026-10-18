@@ -12,7 +12,7 @@ Ansible collection to provision, set up and harden Debian (12, 13) and Ubuntu
 | `afmigoo.provision.base` | Waits for the host, sets DNS servers for systemd-resolved, installs base packages, optionally upgrades, removes unattended-upgrades |
 | `afmigoo.provision.harden` | IPv6 off (GRUB drop-in, reboots), `devsec.hardening.os_hardening` and `ssh_hardening`, ufw deny-by-default with ssh and extra ports allowed. Tune the devsec roles with their own `os_*` / `ssh_*` variables |
 | `afmigoo.provision.podman` | Installs podman, gives rootless users non-overlapping subuid/subgid ranges, enables lingering |
-| `afmigoo.provision.agent_sandbox` | `agent` user without sudo, with rootless podman, fish, Claude Code, opencode, their configs, global rules, seed memories and git SSH key |
+| `afmigoo.provision.agent_sandbox` | `agent` user without sudo, with rootless podman, Claude Code, opencode, dev tools, their configs, global rules, seed memories and git SSH key |
 | `afmigoo.provision.files` | Copies files from the control machine to the host (`files_list`); sources may be plain, ansible-vault or sops-encrypted |
 
 Every role is opt-in: it does nothing unless `<role>_enable: true`, and has
@@ -70,6 +70,14 @@ ansible-playbook afmigoo.provision.agent_sandbox -e agent_sandbox_host_kind=serv
 
 `agent_sandbox_host_kind` (`vm` or `server`) picks the wording of the agents'
 global rules (`~/.claude/CLAUDE.md`, `~/.config/opencode/AGENTS.md`).
+
+`agent_sandbox_enable_vagrant: true` (Debian only, Ubuntu doesn't package Vagrant)
+lets the agent run Vagrant VMs, e.g. for Molecule, without root: vagrant-libvirt
+uses the agent's own libvirt session, and the VMs join libvirt's default network
+(`virbr0`) through `qemu-bridge-helper`, which becomes setuid root and may attach
+to `virbr0` only. The agent joins the `kvm` group; synced folders are off since
+they need root. On a VM host this needs nested virtualization, and the default
+network's 192.168.122.0/24 must not be the host's own subnet.
 
 ### Files
 

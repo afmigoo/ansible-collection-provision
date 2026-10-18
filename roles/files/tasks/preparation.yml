@@ -22,32 +22,11 @@
   vars:
     ansible_python_interpreter: "{{ ansible_playbook_python }}"
   block:
-    - name: Stat the sources
-      ansible.builtin.stat:
-        path: "{{ __files_item.src }}"
-        follow: true
-        get_checksum: false
-      loop: "{{ files_list }}"
-      loop_control:
-        loop_var: __files_item
-        label: "{{ __files_item.src }}"
-      register: __files_src_stat
-
-    - name: Assert the sources exist
-      ansible.builtin.assert:
-        that: __files_src_stat.results[__files_index].stat.isreg | default(false)
-        fail_msg: "{{ __files_item.src }} is missing or not a regular file on the control machine"
-        quiet: true
-      loop: "{{ files_list }}"
-      loop_control:
-        loop_var: __files_item
-        index_var: __files_index
-        label: "{{ __files_item.src }}"
-
     # Every sops format writes its metadata keys, among them the MAC as ENC[AES256_GCM,...] and lastmodified:
     # json/binary "mac": "ENC[AES256_GCM,  (any whitespace, also minified), and one key per line in yaml
     # mac: ENC[AES256_GCM,  dotenv sops_mac=ENC[AES256_GCM,  ini mac = ENC[AES256_GCM,
-    # Requiring both keeps plain files that merely quote a MAC out. grep reads binary files too
+    # Requiring both keeps plain files that merely quote a MAC out. grep reads binary files too, follows symlinks
+    # and fails (rc 2) on a missing source or a directory
     - name: Find sources with a sops MAC
       ansible.builtin.command:
         argv:

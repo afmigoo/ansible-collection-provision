@@ -36,6 +36,7 @@ and expect tool logins and tokens to be gone after a rebuild.
 ### Git over SSH
 
 Use `~/.ssh/id_ed25519` (the default key) and SSH remotes (`git@host:org/repo.git`).
+Provisioning generated it on this {{ _agent_sandbox_host_word }}, and a rebuild makes a new one.
 Never replace or regenerate it. If a host answers `Permission denied (publickey)`, show
 the user `~/.ssh/id_ed25519.pub` and ask them to add it. For a new host, accept its key
 once with `ssh -o StrictHostKeyChecking=accept-new -T git@<host>`.

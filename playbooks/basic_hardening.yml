@@ -8,6 +8,9 @@
   vars:
     base_enable: true
     harden_enable: true
+    # Copies nothing unless files_list is set
+    files_enable: true
   roles:
     - role: afmigoo.provision.base
     - role: afmigoo.provision.harden
+    - role: afmigoo.provision.files

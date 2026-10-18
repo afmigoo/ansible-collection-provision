@@ -1,0 +1,152 @@
+---
+- name: Check the file list
+  ansible.builtin.assert:
+    that:
+      - __files_item.src is defined and __files_item.src is abs
+      - __files_item.dest is defined and __files_item.dest is abs and not __files_item.dest.endswith('/')
+      - __files_item.mode is not defined or __files_item.mode is string
+      - files_list | map(attribute='dest') | select('eq', __files_item.dest) | list | length == 1
+    fail_msg: >-
+      files_list entries need absolute src (on the control machine) and dest (on the host, a file path) paths, a quoted mode
+      (e.g. "0640") and a dest no other entry uses, got src={{ __files_item.src | default('') }}
+      dest={{ __files_item.dest | default('') }} mode={{ __files_item.mode | default('') }}
+    quiet: true
+  loop: "{{ files_list }}"
+  loop_control:
+    loop_var: __files_item
+    label: "{{ __files_item.dest | default('') }}"
+
+- name: Check the sources on the control machine
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  block:
+    # Every sops format writes its metadata keys, among them the MAC as ENC[AES256_GCM,...] and lastmodified:
+    # json/binary "mac": "ENC[AES256_GCM,  (any whitespace, also minified), and one key per line in yaml
+    # mac: ENC[AES256_GCM,  dotenv sops_mac=ENC[AES256_GCM,  ini mac = ENC[AES256_GCM,
+    # Requiring both keeps plain files that merely quote a MAC out. grep reads binary files too, follows symlinks
+    # and fails (rc 2) on a missing source or a directory
+    - name: Find sources with a sops MAC
+      ansible.builtin.command:
+        argv:
+          - grep
+          - -Eq
+          - '"mac"[[:space:]]*:[[:space:]]*"ENC\[AES256_GCM,|^[[:space:]]*(mac: |sops_mac=|mac[[:space:]]*=[[:space:]]*)ENC\[AES256_GCM,'
+          - "{{ __files_item.src }}"
+      loop: "{{ files_list }}"
+      loop_control:
+        loop_var: __files_item
+        label: "{{ __files_item.src }}"
+      register: __files_detect_mac
+      changed_when: false
+      failed_when: __files_detect_mac.rc > 1
+      check_mode: false
+
+    - name: Find sources with a sops lastmodified date
+      ansible.builtin.command:
+        argv:
+          - grep
+          - -Eq
+          - '"lastmodified"[[:space:]]*:[[:space:]]*"|^[[:space:]]*(lastmodified: |sops_lastmodified=|lastmodified[[:space:]]*=[[:space:]]*)'
+          - "{{ __files_item.src }}"
+      loop: "{{ files_list }}"
+      loop_control:
+        loop_var: __files_item
+        label: "{{ __files_item.src }}"
+      register: __files_detect_date
+      changed_when: false
+      failed_when: __files_detect_date.rc > 1
+      check_mode: false
+
+- name: Remember the sops-encrypted sources
+  ansible.builtin.set_fact:
+    _files_sops_srcs: >-
+      {{ files_list | zip(__files_detect_mac.results, __files_detect_date.results)
+         | selectattr('1.rc', 'eq', 0) | selectattr('2.rc', 'eq', 0) | map(attribute='0.src') | list }}
+
+# Failures in the copy are hidden by no_log for sops files and, for a new file, leave it world-readable before its
+# owner and mode are set, so check everything the copy needs on the host first
+- name: Check the destinations on the host
+  block:
+    - name: Look up the owners
+      ansible.builtin.command:
+        argv: [getent, passwd, "{{ __files_item.owner | default('root') }}"]
+      loop: "{{ files_list }}"
+      loop_control:
+        loop_var: __files_item
+        label: "{{ __files_item.owner | default('root') }}"
+      register: __files_owner
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Look up the groups
+      ansible.builtin.command:
+        argv: [getent, group, "{{ __files_item.group | default('root') }}"]
+      loop: "{{ files_list }}"
+      loop_control:
+        loop_var: __files_item
+        label: "{{ __files_item.group | default('root') }}"
+      register: __files_group
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Stat the destination directories
+      ansible.builtin.stat:
+        path: "{{ __files_item.dest | dirname }}"
+        get_checksum: false
+      loop: "{{ files_list }}"
+      loop_control:
+        loop_var: __files_item
+        label: "{{ __files_item.dest | dirname }}"
+      register: __files_dest_dir
+
+    - name: Stat the destinations
+      ansible.builtin.stat:
+        path: "{{ __files_item.dest }}"
+        get_checksum: false
+      loop: "{{ files_list }}"
+      loop_control:
+        loop_var: __files_item
+        label: "{{ __files_item.dest }}"
+      register: __files_dest
+
+    # In check mode an earlier role may only have simulated the owner, the group or the directory, so only the
+    # link and directory checks apply there
+    - name: Assert the destinations
+      ansible.builtin.assert:
+        that:
+          - not (_files_is_dir | bool)
+          - not (_files_is_link | bool)
+          - ansible_check_mode or (_files_owner_ok | bool)
+          - ansible_check_mode or (_files_group_ok | bool)
+          - ansible_check_mode or (_files_dir_ok | bool)
+        fail_msg: >-
+          {{ __files_item.dest }} must not be a directory or a symlink, and its owner
+          {{ __files_item.owner | default('root') }}, group {{ __files_item.group | default('root') }} and directory
+          {{ __files_item.dest | dirname }} must exist on the host
+        quiet: true
+      vars:
+        # file would follow a link and change its target's owner and mode, copy would replace the link
+        _files_is_dir: "{{ __files_dest.results[__files_index].stat.isdir | default(false) }}"
+        _files_is_link: "{{ __files_dest.results[__files_index].stat.islnk | default(false) }}"
+        # Numeric owners and groups need no passwd or group entry
+        _files_owner_ok: >-
+          {{ __files_owner.results[__files_index].rc == 0
+             or __files_item.owner | default('root') | string is match('^[0-9]+$') }}
+        _files_group_ok: >-
+          {{ __files_group.results[__files_index].rc == 0
+             or __files_item.group | default('root') | string is match('^[0-9]+$') }}
+        _files_dir_ok: "{{ __files_dest_dir.results[__files_index].stat.isdir | default(false) }}"
+      loop: "{{ files_list }}"
+      loop_control:
+        loop_var: __files_item
+        index_var: __files_index
+        label: "{{ __files_item.dest }}"
+
+- name: Remember the destinations this run creates
+  ansible.builtin.set_fact:
+    _files_new_dests: >-
+      {{ files_list | zip(__files_dest.results) | rejectattr('1.stat.exists') | map(attribute='0.dest') | list }}

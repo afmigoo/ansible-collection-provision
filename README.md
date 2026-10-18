@@ -12,7 +12,7 @@ Ansible collection to provision, set up and harden Debian (12, 13) and Ubuntu
 | `afmigoo.provision.base` | Waits for the host, sets DNS servers for systemd-resolved, installs base packages, optionally upgrades, removes unattended-upgrades |
 | `afmigoo.provision.harden` | IPv6 off (GRUB drop-in, reboots), `devsec.hardening.os_hardening` and `ssh_hardening`, ufw deny-by-default with ssh and extra ports allowed. Tune the devsec roles with their own `os_*` / `ssh_*` variables |
 | `afmigoo.provision.podman` | Installs podman, gives rootless users non-overlapping subuid/subgid ranges, enables lingering |
-| `afmigoo.provision.agent_sandbox` | `agent` user without sudo, with rootless podman, fish, Claude Code, opencode, gh, glab, sops, their configs, global rules, seed memories and git SSH key |
+| `afmigoo.provision.agent_sandbox` | `agent` user without sudo, with rootless podman, Claude Code, opencode, dev tools, their configs, global rules, seed memories and git SSH key |
 | `afmigoo.provision.files` | Copies files from the control machine to the host (`files_list`); sources may be plain, ansible-vault or sops-encrypted |
 
 Every role is opt-in: it does nothing unless `<role>_enable: true`, and has

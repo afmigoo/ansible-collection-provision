@@ -1,0 +1,6 @@
+---
+# Test vars for the Molecule scenario, loaded with vars_from: test; the role itself never loads them
+podman_enable: true
+# The scenario's prepare.yml creates these users
+podman_rootless_users: [bob, alice, jack]
+podman_verify_image: docker.io/library/busybox:1.37

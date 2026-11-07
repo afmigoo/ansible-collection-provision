@@ -1,0 +1,4 @@
+---
+# Test vars for the Molecule scenario, loaded with vars_from: test; the role itself never loads them
+agent_sandbox_enable: true
+agent_sandbox_host_kind: vm

@@ -1,6 +1,14 @@
 ---
 - name: Verify
-  ansible.builtin.import_playbook: afmigoo.provision.verify
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Verify the files role with its test vars
+      ansible.builtin.import_role:
+        name: afmigoo.provision.files
+        tasks_from: verification
+        vars_from: test
 
 # The role's own verification compares the host with a fresh copy, which can't catch a wrong decryption. Check the
 # fixtures against the checksums of their plaintext (sops.yaml as sops re-serializes it)

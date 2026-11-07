@@ -13,9 +13,3 @@
   ansible.builtin.apt:
     name: "{{ base_packages }}"
     state: present
-
-- name: Remove unattended-upgrades
-  ansible.builtin.apt:
-    name: unattended-upgrades
-    state: absent
-  when: base_remove_unattended_upgrades | bool

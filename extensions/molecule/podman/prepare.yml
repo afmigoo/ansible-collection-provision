@@ -1,0 +1,15 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    # Same users as podman_rootless_users in roles/podman/vars/test.yml
+    - name: Create the rootless test users
+      ansible.builtin.user:
+        name: "{{ __prepare_user }}"
+        shell: /bin/bash
+        create_home: true
+      loop: [bob, alice, jack]
+      loop_control:
+        loop_var: __prepare_user

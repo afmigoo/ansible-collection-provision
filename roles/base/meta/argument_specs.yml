@@ -44,10 +44,6 @@ argument_specs:
         type: bool
         default: false
         description: Upgrade all installed packages (apt safe upgrade).
-      base_remove_unattended_upgrades:
-        type: bool
-        default: true
-        description: Remove unattended-upgrades so packages only change when provisioning runs.
   verification:
     short_description: Verify the base setup
     description:

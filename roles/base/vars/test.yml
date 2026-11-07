@@ -1,0 +1,4 @@
+---
+# Test vars for the Molecule scenario, loaded with vars_from: test; the role itself never loads them
+base_enable: true
+base_upgrade: true

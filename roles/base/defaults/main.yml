@@ -24,4 +24,3 @@ base_packages:
   - tmux
 # Run a safe `apt upgrade` of everything installed
 base_upgrade: false
-base_remove_unattended_upgrades: true

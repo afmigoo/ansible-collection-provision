@@ -47,3 +47,18 @@
           at boot: {{ __harden_ufw_boot.status.UnitFileState | default('n/a') }};
           IPv6 addresses present: {{ __harden_ipv6.stdout | trim | length > 0 }};
           devsec sysctl drop-in present: {{ __harden_sysctl.stat.exists }}
+
+    # `ufw status` starts each rule line with port/proto, or just the port for proto any
+    - name: Assert the extra port rules
+      ansible.builtin.assert:
+        that: __harden_rule_name in __harden_ufw.stdout_lines | select | map('split') | map('first')
+        fail_msg: "No ufw rule allows {{ __harden_rule_name }}"
+        quiet: true
+      vars:
+        __harden_proto: "{{ __harden_rule.proto | default('tcp') }}"
+        __harden_rule_name: "{{ __harden_rule.port }}{{ '' if __harden_proto == 'any' else '/' ~ __harden_proto }}"
+      loop: "{{ harden_ufw_allowed_ports }}"
+      loop_control:
+        loop_var: __harden_rule
+        label: "{{ __harden_rule_name }}"
+      when: harden_enable_ufw | bool

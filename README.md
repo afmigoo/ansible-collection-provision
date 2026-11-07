@@ -9,7 +9,7 @@ Ansible collection to provision, set up and harden Debian (12, 13) and Ubuntu
 
 | Role | What it does |
 |------|--------------|
-| `afmigoo.provision.base` | Waits for the host, sets DNS servers for systemd-resolved, installs base packages, optionally upgrades, removes unattended-upgrades |
+| `afmigoo.provision.base` | Waits for the host, sets DNS servers for systemd-resolved, installs base packages, optionally upgrades |
 | `afmigoo.provision.harden` | IPv6 off (GRUB drop-in, reboots), `devsec.hardening.os_hardening` and `ssh_hardening`, ufw deny-by-default with ssh and extra ports allowed. Tune the devsec roles with their own `os_*` / `ssh_*` variables |
 | `afmigoo.provision.podman` | Installs podman, gives rootless users non-overlapping subuid/subgid ranges, enables lingering |
 | `afmigoo.provision.agent_sandbox` | `agent` user without sudo, with rootless podman, Claude Code, opencode, dev tools, their configs, global rules, seed memories and git SSH key |
@@ -54,8 +54,23 @@ Dependencies (`devsec.hardening`, `community.general`) are installed with it.
 ### Basic hardening
 
 ```sh
-ansible-playbook afmigoo.provision.basic_hardening -e '{"harden_ufw_allowed_ports": [80, 443]}'
+ansible-playbook afmigoo.provision.basic_hardening -e '{"harden_ufw_allowed_ports": [{"port": 80}, {"port": 443}]}'
 ```
+
+`harden_ufw_allowed_ports` opens extra ports besides ssh:
+
+```yaml
+harden_ufw_allowed_ports:
+  - port: 443                # proto tcp, comment harden_ufw_comment
+  - port: 51820
+    proto: udp               # tcp (default), udp or any
+    comment: WireGuard       # "" for no comment
+```
+
+A rule without its own comment gets `harden_ufw_comment` ("Managed by Ansible (afmigoo.provision.harden)").
+
+Provisioning only adds ufw rules: a port removed from the list stays open until you delete its rule
+(`ufw delete allow 51820/udp`).
 
 ### Agent sandbox
 
@@ -146,15 +161,18 @@ for secrets (gitleaks) and workflow problems (actionlint, zizmor). The Molecule 
 
 ### Molecule tests
 
-`extensions/molecule/` has one scenario per playbook (`basic_hardening`,
-`podman_lab`, `agent_sandbox`) and one for the `files` role, which no playbook
-exercises on its own. Each boots four VMs with vagrant-libvirt,
+`extensions/molecule/` has one scenario per role (`base`, `harden`, `podman`,
+`agent_sandbox`, `files`); the playbooks only combine roles and are syntax-checked
+in CI. Each scenario runs its role alone with the role's test vars,
+`roles/<role>/vars/test.yml` (`import_role` with `vars_from: test`; the role never
+loads that file itself). A scenario's `prepare.yml` sets up what the role expects
+from the host, e.g. the users for `podman`. Each boots four VMs with vagrant-libvirt,
 Debian 12 and 13 (1 vCPU, 1 GiB) and Ubuntu 24.04 and 26.04 (1 vCPU, 2 GiB), runs
-converge, idempotence, then `afmigoo.provision.verify` on all of them at once,
-and destroys them.
+prepare, converge, idempotence, then the role's `verification` entry point on all
+of them at once, and destroys them.
 
 ```sh
-make test-basic_hardening   # one scenario (molecule test -s basic_hardening)
+make test-harden            # one scenario (molecule test -s harden)
 make test                   # all of them, one VM at a time (molecule test --all)
 make destroy                # clean up after an interrupted run
 ```

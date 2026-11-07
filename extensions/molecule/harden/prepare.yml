@@ -1,0 +1,10 @@
+---
+# harden installs ufw without refreshing the apt cache; in the playbooks base runs first and refreshes it
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Refresh the apt cache
+      ansible.builtin.apt:
+        update_cache: true

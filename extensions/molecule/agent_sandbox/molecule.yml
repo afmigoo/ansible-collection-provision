@@ -1,15 +1,6 @@
 ---
-# Converge with the afmigoo.provision.agent_sandbox playbook, check idempotence, then run afmigoo.provision.verify.
-# The toggles below tell the verify playbook which roles to check.
+# Tests the agent_sandbox role alone: converge and verify run it with roles/agent_sandbox/vars/test.yml (vars_from: test),
+# then idempotence and its verification entry point.
+# verify.yml also runs the podman verification for the agent, which the role sets up.
 provisioner:
   name: ansible
-  inventory:
-    group_vars:
-      all:
-        base_enable: true
-        harden_enable: true
-        agent_sandbox_enable: true
-        podman_enable: true
-        podman_rootless_users: [agent]
-        podman_verify_image: docker.io/library/busybox:1.37
-        agent_sandbox_host_kind: vm

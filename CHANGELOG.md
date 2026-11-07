@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `base` no longer removes unattended-upgrades; `base_remove_unattended_upgrades` is gone. Hosts where it was already
+  removed don't get it back.
+
 ## 0.2.0
 
 - `agent_sandbox`: the agent's git SSH key is generated on the host when missing instead of being copied from the

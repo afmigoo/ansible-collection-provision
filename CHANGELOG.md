@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `files`: with sops-encrypted sources it checks that the `sops` binary is on the control machine first and fails
+  with "install the sops binary" instead of the lookup's "No such file or directory: 'sops'".
+
 ## 0.3.0
 
 - `base` no longer removes unattended-upgrades; `base_remove_unattended_upgrades` is gone. Hosts where it was already

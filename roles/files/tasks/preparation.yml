@@ -65,6 +65,33 @@
       {{ files_list | zip(__files_detect_mac.results, __files_detect_date.results)
          | selectattr('1.rc', 'eq', 0) | selectattr('2.rc', 'eq', 0) | map(attribute='0.src') | list }}
 
+# The community.sops lookup runs the sops binary on the control machine. Without it the copy would fail with only
+# "No such file or directory: 'sops'"
+- name: Check sops on the control machine
+  when: _files_sops_srcs | length > 0
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  block:
+    - name: Run sops --version
+      ansible.builtin.command:
+        argv: [sops, --version]
+      environment:
+        SOPS_DISABLE_VERSION_CHECK: "true"
+      register: __files_sops_version
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Assert sops is installed
+      ansible.builtin.assert:
+        that: __files_sops_version.rc == 0
+        fail_msg: >-
+          files_list has sops-encrypted sources ({{ _files_sops_srcs | join(', ') }}); install the sops binary on the
+          control machine to decrypt them
+        quiet: true
+
 # Failures in the copy are hidden by no_log for sops files and, for a new file, leave it world-readable before its
 # owner and mode are set, so check everything the copy needs on the host first
 - name: Check the destinations on the host

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `agent_sandbox`: the Ansible role conventions are installed as the `ansible-roles` skill in
+  `~/.claude/skills/` (Claude Code and opencode both read it) and overwritten on every run, instead of being seeded
+  once as the `ansible/role-conventions.md` memory. Existing VMs keep the old memory file until it is deleted.
+
 ## 0.3.1
 
 - `files`: with sops-encrypted sources it checks that the `sops` binary is on the control machine first and fails

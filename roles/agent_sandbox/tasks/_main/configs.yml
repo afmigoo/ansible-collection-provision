@@ -9,6 +9,8 @@
   loop:
     - .claude
     - .claude/commands
+    - .claude/skills
+    - .claude/skills/ansible-roles
     - .config
     - .config/opencode
     - .config/opencode/commands
@@ -17,7 +19,6 @@
     - .agent
     - .agent/memories
     - .agent/memories/sandbox
-    - .agent/memories/ansible
   loop_control:
     loop_var: __agent_sandbox_dir
 
@@ -52,6 +53,9 @@
       dest: .claude/commands/remember.md
     - src: remember.md
       dest: .config/opencode/commands/remember.md
+    # opencode reads skills from ~/.claude/skills too
+    - src: skills/ansible-roles/SKILL.md
+      dest: .claude/skills/ansible-roles/SKILL.md
   loop_control:
     loop_var: __agent_sandbox_file
     label: "{{ __agent_sandbox_file.dest }}"
@@ -70,19 +74,6 @@
   loop:
     - README.md
     - sandbox/context.md
-  loop_control:
-    loop_var: __agent_sandbox_memory
-
-- name: Seed static agent memories
-  ansible.builtin.copy:
-    src: "agent/memories/{{ __agent_sandbox_memory }}"
-    dest: "{{ agent_sandbox_home }}/.agent/memories/{{ __agent_sandbox_memory }}"
-    owner: "{{ agent_sandbox_user }}"
-    group: "{{ agent_sandbox_user }}"
-    mode: "0644"
-    force: false
-  loop:
-    - ansible/role-conventions.md
   loop_control:
     loop_var: __agent_sandbox_memory
 

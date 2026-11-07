@@ -1,3 +1,8 @@
+---
+name: ansible-roles
+description: Conventions for writing Ansible roles - variable prefixes, role layout, check mode, entry points and argument specs, tags, handlers, validation, templates and Molecule tests. Use when creating, editing or reviewing an Ansible role, its defaults, tasks, templates or Molecule scenario.
+---
+
 # Ansible Role Conventions
 
 General standards for creating Ansible roles.

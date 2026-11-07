@@ -33,7 +33,7 @@ roles/<name>/
       *.yml
   templates/                # Jinja2 templates, mirrors target filesystem layout
   files/                    # Static files to copy to target hosts
-  vars/                     # Test/inventory variable overrides
+  vars/                     # Test vars only, loaded with vars_from (never vars/main.yml)
     test.yml                # Full-role test vars
     test-<scenario>.yml     # Scenario-specific test vars
   README.md
@@ -115,6 +115,21 @@ dry-run:
 
 - Template directory structure mirrors the target filesystem layout.
 - Always use `lstrip_blocks: true` for clean rendered output.
+
+## Molecule Tests
+
+- One scenario per role, named after it. Playbooks only combine roles; a
+  syntax check covers them.
+- `converge.yml` runs the role alone: `import_role` with `vars_from: test`.
+  `verify.yml` runs its `verification` entry point the same way
+  (`tasks_from: verification`, `vars_from: test`). No playbook imports and no
+  lookups to find the vars.
+- `vars/test.yml` turns the role on (`<prefix>_enable: true`) and sets what the
+  test needs. Ansible auto-loads only `vars/main.yml`, so test vars never reach
+  users. Keep other roles' variables out of it (ansible-lint
+  `var-naming[no-role-prefix]`); pass them as `vars:` on that role's import.
+- `prepare.yml` sets up what the role expects from the host (users, apt cache),
+  so the role doesn't have to run after another one.
 
 ## Cross-Role Dependencies
 

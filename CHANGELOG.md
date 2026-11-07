@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 - `base` no longer removes unattended-upgrades; `base_remove_unattended_upgrades` is gone. Hosts where it was already
   removed don't get it back.

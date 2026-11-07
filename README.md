@@ -185,4 +185,5 @@ contents, so it needs the `sops` binary on the control machine. Its fixtures in 
 are throwaway test secrets, allowlisted for gitleaks in `.gitleaks.toml`.
 
 Role conventions (variable prefixes, layout, check mode, tags, handlers) follow
-`roles/agent_sandbox/files/agent/memories/ansible/role-conventions.md`.
+`roles/agent_sandbox/files/agent/skills/ansible-roles/SKILL.md`, which `agent_sandbox`
+installs as the `ansible-roles` skill for Claude Code and opencode.

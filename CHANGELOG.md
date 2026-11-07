@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
 - `agent_sandbox`: the Ansible role conventions are installed as the `ansible-roles` skill in
   `~/.claude/skills/` (Claude Code and opencode both read it) and overwritten on every run, instead of being seeded

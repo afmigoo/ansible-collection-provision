@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `agent_sandbox`: Claude Code no longer adds the claude.ai session link (the `Claude-Session` trailer and the PR-body
+  link) to commits and pull requests (`attribution.sessionUrl: false`), nor the `Co-Authored-By: Claude` trailer to
+  commits (`attribution.commit: ""`).
+
 ## 0.4.0
 
 - `agent_sandbox`: the Ansible role conventions are installed as the `ansible-roles` skill in

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1
 
 - `files`: with sops-encrypted sources it checks that the `sops` binary is on the control machine first and fails
   with "install the sops binary" instead of the lookup's "No such file or directory: 'sops'".

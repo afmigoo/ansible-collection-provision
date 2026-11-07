@@ -8,3 +8,8 @@ provisioner:
       all:
         base_enable: true
         harden_enable: true
+        # One entry per form: plain number (TCP), UDP with a comment, any protocol. verify.yml checks the rules
+        harden_ufw_allowed_ports:
+          - 443
+          - {port: 51820, proto: udp, comment: WireGuard}
+          - {port: 53, proto: any}

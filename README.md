@@ -57,6 +57,17 @@ Dependencies (`devsec.hardening`, `community.general`) are installed with it.
 ansible-playbook afmigoo.provision.basic_hardening -e '{"harden_ufw_allowed_ports": [80, 443]}'
 ```
 
+`harden_ufw_allowed_ports` entries are port numbers (TCP) or mappings that pick the protocol:
+
+```yaml
+harden_ufw_allowed_ports:
+  - 443
+  - {port: 51820, proto: udp, comment: WireGuard}   # proto: tcp (default), udp or any
+```
+
+Provisioning only adds ufw rules: a port removed from the list stays open until you delete its rule
+(`ufw delete allow 51820/udp`).
+
 ### Agent sandbox
 
 The agent's git SSH key is generated on the host (`~agent/.ssh/id_ed25519`) when

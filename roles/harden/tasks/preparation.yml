@@ -8,3 +8,33 @@
     that: ansible_facts['os_family'] == 'Debian'
     fail_msg: "afmigoo.provision.harden supports Debian only, got {{ ansible_facts['os_family'] }}"
     quiet: true
+
+- name: Check the extra ufw ports
+  when: harden_enable_ufw | bool
+  block:
+    # A plain number is a TCP port; a mapping sets port, proto and comment
+    - name: Normalize the extra ufw ports
+      ansible.builtin.set_fact:
+        _harden_ufw_rules: >-
+          {%- set rules = [] -%}
+          {%- for entry in harden_ufw_allowed_ports -%}
+            {%- set _ = rules.append({'proto': 'tcp', 'comment': ''}
+                                     | combine(entry if entry is mapping else {'port': entry})) -%}
+          {%- endfor -%}
+          {{ rules }}
+
+    - name: Check that every extra ufw port is valid
+      ansible.builtin.assert:
+        that:
+          - __harden_rule.port is defined and __harden_rule.port is integer
+          - __harden_rule.port >= 1 and __harden_rule.port <= 65535
+          - __harden_rule.proto in ['tcp', 'udp', 'any']
+          - __harden_rule.comment is string
+          - __harden_rule.keys() | difference(['port', 'proto', 'comment']) | length == 0
+        fail_msg: >-
+          Invalid harden_ufw_allowed_ports entry {{ __harden_rule }}: use a port number (1-65535) or a mapping with
+          port, optional proto (tcp, udp or any; default tcp) and optional comment
+        quiet: true
+      loop: "{{ _harden_ufw_rules }}"
+      loop_control:
+        loop_var: __harden_rule

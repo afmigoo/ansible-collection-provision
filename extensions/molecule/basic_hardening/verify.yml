@@ -1,3 +1,22 @@
 ---
 - name: Verify
   ansible.builtin.import_playbook: afmigoo.provision.verify
+
+- name: Check the extra ufw ports
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Read the ufw rules
+      ansible.builtin.command: ufw status
+      register: __verify_ufw
+      changed_when: false
+      check_mode: false
+
+    - name: Check that every harden_ufw_allowed_ports entry has its rule
+      ansible.builtin.assert:
+        that:
+          - __verify_ufw.stdout is search('^443/tcp\\s+ALLOW', multiline=True)
+          - __verify_ufw.stdout is search('^51820/udp\\s+ALLOW.*# WireGuard$', multiline=True)
+          - __verify_ufw.stdout is search('^53\\s+ALLOW', multiline=True)
+        fail_msg: "Missing extra port rules in: {{ __verify_ufw.stdout }}"

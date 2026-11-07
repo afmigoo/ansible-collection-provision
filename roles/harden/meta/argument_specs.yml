@@ -68,9 +68,12 @@ argument_specs:
         description: SSH port to allow in ufw.
       harden_ufw_allowed_ports:
         type: list
-        elements: int
+        elements: raw
         default: []
-        description: Extra TCP ports to allow in ufw.
+        description:
+          - Extra ports to allow in ufw. Each entry is a port number (TCP) or a mapping with C(port), optional
+            C(proto) (C(tcp), C(udp) or C(any); default C(tcp)) and optional C(comment).
+          - Only adds rules; a port removed from the list stays open until its rule is deleted by hand.
   verification:
     short_description: Verify the hardening
     description:

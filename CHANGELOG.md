@@ -4,6 +4,8 @@
 
 - `base` no longer removes unattended-upgrades; `base_remove_unattended_upgrades` is gone. Hosts where it was already
   removed don't get it back.
+- `harden`: `harden_ufw_allowed_ports` entries may be mappings with `port`, `proto` (`tcp`, `udp` or `any`) and
+  `comment`; plain port numbers are still TCP. Entries are checked before any change.
 
 ## 0.2.0
 

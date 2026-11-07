@@ -93,8 +93,8 @@ argument_specs:
   verification:
     short_description: Verify the hardening
     description:
-      - Checks the sshd config, that ufw is active and has a rule for every extra port, that IPv6 is off and that
-        the devsec OS hardening applied.
+      - Checks the sshd config, that ufw is active and has a rule for every extra port and protocol, that IPv6 is
+        off and that the devsec OS hardening applied.
     author: afmigoo
     options:
       harden_enable_os:
@@ -113,7 +113,7 @@ argument_specs:
         type: list
         elements: dict
         default: []
-        description: Extra ports whose ufw rules must exist; other rules are allowed.
+        description: Extra ports whose ufw rules must exist (port and protocol); other rules are allowed.
         options:
           port:
             type: int
@@ -126,8 +126,4 @@ argument_specs:
             description: Protocol to allow.
           comment:
             type: str
-            description: Comment on the ufw rule; defaults to O(harden_ufw_comment), an empty string means none.
-      harden_ufw_comment:
-        type: str
-        default: Managed by Ansible (afmigoo.provision.harden)
-        description: Comment of the extra port rules that don't set their own.
+            description: Comment on the ufw rule; not checked.

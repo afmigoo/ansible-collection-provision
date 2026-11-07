@@ -8,7 +8,7 @@
   default `tcp`) and `comment`, so a rule can be UDP or both protocols. Plain port numbers are no longer accepted:
   write `[80, 443]` as `[{port: 80}, {port: 443}]`. Rules without a comment get `harden_ufw_comment`
   ("Managed by Ansible (afmigoo.provision.harden)"), so existing rules are updated once. The verification checks that
-  every listed rule exists.
+  every listed port and protocol has a rule.
 
 ## 0.2.0
 

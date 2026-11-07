@@ -4,8 +4,11 @@
 
 - `base` no longer removes unattended-upgrades; `base_remove_unattended_upgrades` is gone. Hosts where it was already
   removed don't get it back.
-- `harden`: `harden_ufw_allowed_ports` entries may be mappings with `port`, `proto` (`tcp`, `udp` or `any`) and
-  `comment`; plain port numbers are still TCP. Entries are checked before any change.
+- `harden` (breaking): `harden_ufw_allowed_ports` entries are mappings with `port`, `proto` (`tcp`, `udp` or `any`;
+  default `tcp`) and `comment`, so a rule can be UDP or both protocols. Plain port numbers are no longer accepted:
+  write `[80, 443]` as `[{port: 80}, {port: 443}]`. Rules without a comment get `harden_ufw_comment`
+  ("Managed by Ansible (afmigoo.provision.harden)"), so existing rules are updated once. The verification checks that
+  every listed rule exists.
 
 ## 0.2.0
 

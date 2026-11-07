@@ -25,12 +25,12 @@
   community.general.ufw:
     rule: allow
     port: "{{ __harden_rule.port | string }}"
-    proto: "{{ __harden_rule.proto }}"
-    comment: "{{ __harden_rule.comment if __harden_rule.comment else omit }}"
-  loop: "{{ _harden_ufw_rules }}"
+    proto: "{{ __harden_rule.proto | default('tcp') }}"
+    comment: "{{ __harden_rule.comment | default(harden_ufw_comment) or omit }}"
+  loop: "{{ harden_ufw_allowed_ports }}"
   loop_control:
     loop_var: __harden_rule
-    label: "{{ __harden_rule.port }}/{{ __harden_rule.proto }}"
+    label: "{{ __harden_rule.port }}/{{ __harden_rule.proto | default('tcp') }}"
 
 - name: Enable ufw and deny incoming traffic by default
   community.general.ufw:

@@ -68,16 +68,33 @@ argument_specs:
         description: SSH port to allow in ufw.
       harden_ufw_allowed_ports:
         type: list
-        elements: raw
+        elements: dict
         default: []
         description:
-          - Extra ports to allow in ufw. Each entry is a port number (TCP) or a mapping with C(port), optional
-            C(proto) (C(tcp), C(udp) or C(any); default C(tcp)) and optional C(comment).
+          - Extra ports to allow in ufw.
           - Only adds rules; a port removed from the list stays open until its rule is deleted by hand.
+        options:
+          port:
+            type: int
+            required: true
+            description: Port number (1-65535).
+          proto:
+            type: str
+            choices: [tcp, udp, any]
+            default: tcp
+            description: Protocol to allow.
+          comment:
+            type: str
+            description: Comment on the ufw rule; defaults to O(harden_ufw_comment), an empty string means none.
+      harden_ufw_comment:
+        type: str
+        default: Managed by Ansible (afmigoo.provision.harden)
+        description: Comment of the extra port rules that don't set their own.
   verification:
     short_description: Verify the hardening
     description:
-      - Checks the sshd config, that ufw is active, that IPv6 is off and that the devsec OS hardening applied.
+      - Checks the sshd config, that ufw is active and has a rule for every extra port, that IPv6 is off and that
+        the devsec OS hardening applied.
     author: afmigoo
     options:
       harden_enable_os:
@@ -92,3 +109,25 @@ argument_specs:
         type: bool
         default: true
         description: Expect ufw to be active.
+      harden_ufw_allowed_ports:
+        type: list
+        elements: dict
+        default: []
+        description: Extra ports whose ufw rules must exist; other rules are allowed.
+        options:
+          port:
+            type: int
+            required: true
+            description: Port number (1-65535).
+          proto:
+            type: str
+            choices: [tcp, udp, any]
+            default: tcp
+            description: Protocol to allow.
+          comment:
+            type: str
+            description: Comment on the ufw rule; defaults to O(harden_ufw_comment), an empty string means none.
+      harden_ufw_comment:
+        type: str
+        default: Managed by Ansible (afmigoo.provision.harden)
+        description: Comment of the extra port rules that don't set their own.

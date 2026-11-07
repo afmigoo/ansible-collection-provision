@@ -54,16 +54,20 @@ Dependencies (`devsec.hardening`, `community.general`) are installed with it.
 ### Basic hardening
 
 ```sh
-ansible-playbook afmigoo.provision.basic_hardening -e '{"harden_ufw_allowed_ports": [80, 443]}'
+ansible-playbook afmigoo.provision.basic_hardening -e '{"harden_ufw_allowed_ports": [{"port": 80}, {"port": 443}]}'
 ```
 
-`harden_ufw_allowed_ports` entries are port numbers (TCP) or mappings that pick the protocol:
+`harden_ufw_allowed_ports` opens extra ports besides ssh:
 
 ```yaml
 harden_ufw_allowed_ports:
-  - 443
-  - {port: 51820, proto: udp, comment: WireGuard}   # proto: tcp (default), udp or any
+  - port: 443                # proto tcp, comment harden_ufw_comment
+  - port: 51820
+    proto: udp               # tcp (default), udp or any
+    comment: WireGuard       # "" for no comment
 ```
+
+A rule without its own comment gets `harden_ufw_comment` ("Managed by Ansible (afmigoo.provision.harden)").
 
 Provisioning only adds ufw rules: a port removed from the list stays open until you delete its rule
 (`ufw delete allow 51820/udp`).

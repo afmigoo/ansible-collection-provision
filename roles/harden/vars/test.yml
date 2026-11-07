@@ -1,0 +1,11 @@
+---
+# Test vars for the Molecule scenarios, never loaded by the role itself (only vars/main.yml would be).
+# One extra port per form: default proto and comment, UDP with its own comment, any protocol without a comment
+harden_ufw_allowed_ports:
+  - port: 443
+  - port: 51820
+    proto: udp
+    comment: WireGuard
+  - port: 53
+    proto: any
+    comment: ""

@@ -1,22 +1,12 @@
 ---
-- name: Verify
-  ansible.builtin.import_playbook: afmigoo.provision.verify
-
-- name: Check the extra ufw ports
+- name: Load the harden test vars
   hosts: all
   gather_facts: false
-  become: true
   tasks:
-    - name: Read the ufw rules
-      ansible.builtin.command: ufw status
-      register: __verify_ufw
-      changed_when: false
-      check_mode: false
+    # include_vars sets host vars, so they stay set for the imported playbook
+    - name: Load roles/harden/vars/test.yml
+      ansible.builtin.include_vars:
+        file: "{{ lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY') }}/../../../roles/harden/vars/test.yml"
 
-    - name: Check that every harden_ufw_allowed_ports entry has its rule
-      ansible.builtin.assert:
-        that:
-          - __verify_ufw.stdout is search('^443/tcp\\s+ALLOW', multiline=True)
-          - __verify_ufw.stdout is search('^51820/udp\\s+ALLOW.*# WireGuard$', multiline=True)
-          - __verify_ufw.stdout is search('^53\\s+ALLOW', multiline=True)
-        fail_msg: "Missing extra port rules in: {{ __verify_ufw.stdout }}"
+- name: Verify
+  ansible.builtin.import_playbook: afmigoo.provision.verify

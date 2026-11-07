@@ -26,8 +26,10 @@ harden_os_sysctl_overwrite: {}
 # Any other ssh_* / os_* variable of devsec.hardening.ssh_hardening / os_hardening can be set directly
 
 harden_ufw_ssh_port: 22
-# Extra ports to allow besides ssh: a port number (TCP) or a mapping
-#   - 443
-#   - {port: 51820, proto: udp, comment: WireGuard}   # proto: tcp (default), udp or any
+# Extra ports to allow besides ssh
+#   - {port: 443}                                       # proto: tcp (default), udp or any
+#   - {port: 51820, proto: udp, comment: WireGuard}     # comment: harden_ufw_comment by default, "" for none
 # Only adds rules; removing an entry doesn't close the port
 harden_ufw_allowed_ports: []
+# Comment of the extra port rules that don't set their own
+harden_ufw_comment: Managed by Ansible (afmigoo.provision.harden)

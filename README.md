@@ -161,15 +161,18 @@ for secrets (gitleaks) and workflow problems (actionlint, zizmor). The Molecule 
 
 ### Molecule tests
 
-`extensions/molecule/` has one scenario per playbook (`basic_hardening`,
-`podman_lab`, `agent_sandbox`) and one for the `files` role, which no playbook
-exercises on its own. Each boots four VMs with vagrant-libvirt,
+`extensions/molecule/` has one scenario per role (`base`, `harden`, `podman`,
+`agent_sandbox`, `files`); the playbooks only combine roles and are syntax-checked
+in CI. Each scenario runs its role alone with the role's test vars,
+`roles/<role>/vars/test.yml` (`import_role` with `vars_from: test`; the role never
+loads that file itself). A scenario's `prepare.yml` sets up what the role expects
+from the host, e.g. the users for `podman`. Each boots four VMs with vagrant-libvirt,
 Debian 12 and 13 (1 vCPU, 1 GiB) and Ubuntu 24.04 and 26.04 (1 vCPU, 2 GiB), runs
-converge, idempotence, then `afmigoo.provision.verify` on all of them at once,
-and destroys them.
+prepare, converge, idempotence, then the role's `verification` entry point on all
+of them at once, and destroys them.
 
 ```sh
-make test-basic_hardening   # one scenario (molecule test -s basic_hardening)
+make test-harden            # one scenario (molecule test -s harden)
 make test                   # all of them, one VM at a time (molecule test --all)
 make destroy                # clean up after an interrupted run
 ```

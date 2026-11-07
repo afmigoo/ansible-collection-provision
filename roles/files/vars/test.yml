@@ -1,0 +1,19 @@
+---
+# Test vars for the Molecule scenario, loaded with vars_from: test; the role itself never loads them
+files_enable: true
+# The scenario's fixtures, sops- and vault-encrypted with the throwaway keys in extensions/molecule/fixtures/
+_files_test_fixtures: "{{ lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY') }}/../fixtures/files"
+files_list:
+  - src: "{{ _files_test_fixtures }}/plain.txt"
+    dest: /etc/molecule-plain.txt
+    mode: "0644"
+  - src: "{{ _files_test_fixtures }}/vault.txt"
+    dest: /etc/molecule-vault.txt
+  - src: "{{ _files_test_fixtures }}/sops.yaml"
+    dest: /etc/molecule-sops.yaml
+  - src: "{{ _files_test_fixtures }}/sops.env"
+    dest: /etc/molecule-sops.env
+    group: adm
+    mode: "0640"
+  - src: "{{ _files_test_fixtures }}/sops.conf"
+    dest: /etc/molecule-sops.conf

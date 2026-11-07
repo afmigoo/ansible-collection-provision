@@ -1,3 +1,10 @@
 ---
 - name: Converge
-  ansible.builtin.import_playbook: afmigoo.provision.agent_sandbox
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Run the agent_sandbox role with its test vars
+      ansible.builtin.import_role:
+        name: afmigoo.provision.agent_sandbox
+        vars_from: test

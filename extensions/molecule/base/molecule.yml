@@ -1,0 +1,5 @@
+---
+# Tests the base role alone: converge and verify run it with roles/base/vars/test.yml (vars_from: test),
+# then idempotence and its verification entry point.
+provisioner:
+  name: ansible

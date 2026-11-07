@@ -3,5 +3,8 @@
   hosts: all
   gather_facts: false
   become: true
-  roles:
-    - role: afmigoo.provision.files
+  tasks:
+    - name: Run the files role with its test vars
+      ansible.builtin.import_role:
+        name: afmigoo.provision.files
+        vars_from: test

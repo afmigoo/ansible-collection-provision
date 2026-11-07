@@ -9,6 +9,10 @@
   write `[80, 443]` as `[{port: 80}, {port: 443}]`. Rules without a comment get `harden_ufw_comment`
   ("Managed by Ansible (afmigoo.provision.harden)"), so existing rules are updated once. The verification checks that
   every listed port and protocol has a rule.
+- Molecule: one scenario per role (`base`, `harden`, `podman`, `agent_sandbox`, `files`) instead of per playbook.
+  Each runs its role with `import_role` and the role's test vars in `roles/<role>/vars/test.yml` (`vars_from: test`),
+  then its `verification` entry point; `prepare.yml` sets up what a role expects (users for `podman`, the apt cache
+  for `harden`).
 
 ## 0.2.0
 

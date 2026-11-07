@@ -1,0 +1,6 @@
+---
+# Tests the harden role alone: converge and verify run it with roles/harden/vars/test.yml (vars_from: test),
+# then idempotence and its verification entry point.
+# prepare.yml refreshes the apt cache, which the playbooks leave to the base role.
+provisioner:
+  name: ansible

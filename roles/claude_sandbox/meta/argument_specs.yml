@@ -8,7 +8,7 @@ argument_specs:
         marketplaces and plugins with `claude plugin`.
       - Expects the agent user and ~/.agents from afmigoo.provision.agent_sandbox, which has to run first; it isn't a
         dependency.
-      - Fails instead of replacing a real file or directory where a link belongs.
+      - A file or directory at a link's path is replaced by the link.
     author: afmigoo
     options: &claude_sandbox_options
       claude_sandbox_enable:
@@ -21,10 +21,6 @@ argument_specs:
         description:
           - Link ~/.claude/CLAUDE.md to ~/.agents/AGENTS.md, ~/.claude/skills to ~/.agents/skills and
             ~/.claude/commands to ~/.agents/commands, each only when its target exists.
-      claude_sandbox_enable_plugins:
-        type: bool
-        default: true
-        description: Install claude_sandbox_marketplaces and claude_sandbox_plugins.
       claude_sandbox_user:
         type: str
         default: "{{ agent_sandbox_user | default('agent') }}"

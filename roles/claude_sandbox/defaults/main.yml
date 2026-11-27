@@ -4,7 +4,6 @@ claude_sandbox_enable: false
 
 # Link ~/.claude/CLAUDE.md, skills and commands to the shared context in ~/.agents
 claude_sandbox_enable_links: true
-claude_sandbox_enable_plugins: true
 
 claude_sandbox_user: "{{ agent_sandbox_user | default('agent') }}"
 claude_sandbox_home: "{{ agent_sandbox_home | default('/home/' ~ claude_sandbox_user) }}"
@@ -12,8 +11,7 @@ claude_sandbox_home: "{{ agent_sandbox_home | default('/home/' ~ claude_sandbox_
 # A release such as "2.1.280", or "latest", which installs the newest release once and never upgrades it
 claude_sandbox_version: "2.1.280"
 
-# ~/.claude/settings.json; empty leaves the file alone. The enabledPlugins and extraKnownMarketplaces keys that
-# `claude plugin` writes there are kept unless set here
+# ~/.claude/settings.json; empty leaves the file alone
 claude_sandbox_settings: {}
 
 # Plugin marketplaces and plugins, installed with `claude plugin` as the agent (user scope), e.g.

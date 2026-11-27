@@ -14,6 +14,8 @@
 - name: Apply devsec OS hardening
   ansible.builtin.include_role:
     name: devsec.hardening.os_hardening
+    apply:
+      tags: [harden, harden_os]
   vars:
     # os_hardening templates /etc/default/ufw; keep its IPV6= in line with the ufw tasks
     ufw_enable_ipv6: "{{ not (harden_enable_ipv6_disable | bool) }}"

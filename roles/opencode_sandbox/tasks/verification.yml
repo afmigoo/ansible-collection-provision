@@ -34,49 +34,24 @@
           {{ (__opencode_sandbox_config_file.content | b64decode | from_json)
              if __opencode_sandbox_config_file.content is defined else {} }}
 
+# Re-runs the links in check mode: any change means a link is missing or points elsewhere. check_mode here doesn't set
+# ansible_check_mode, so a real file or directory at a link's path fails the link task
 - name: Check the links to the shared context
-  when: opencode_sandbox_enable_links | default(true) | bool
+  when: opencode_sandbox_enable_links | bool
   tags: [opencode_sandbox, opencode_sandbox_verify]
   block:
-    - name: Stat the shared context
-      ansible.builtin.stat:
-        path: "{{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.target }}"
-        get_checksum: false
-      loop: "{{ _opencode_sandbox_links }}"
-      loop_control:
-        loop_var: __opencode_sandbox_link
-        label: "{{ __opencode_sandbox_link.target }}"
-      register: __opencode_sandbox_link_targets
+    - name: Re-run the links in check mode
+      ansible.builtin.import_tasks: _main/links.yml
+      check_mode: true
 
-    - name: Stat the links
-      ansible.builtin.stat:
-        path: "{{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.path }}"
-        follow: false
-        get_checksum: false
-      loop: "{{ _opencode_sandbox_links }}"
-      loop_control:
-        loop_var: __opencode_sandbox_link
-        label: "{{ __opencode_sandbox_link.path }}"
-      register: __opencode_sandbox_link_paths
-
-    # Only targets that exist get a link
     - name: Assert the links
       ansible.builtin.assert:
-        that:
-          - _opencode_sandbox_link_stat.islnk | default(false)
-          - _opencode_sandbox_link_stat.lnk_source | default('') == opencode_sandbox_home ~ '/' ~ __opencode_sandbox_link.target
-        fail_msg: >-
-          {{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.path }} isn't a link to
-          {{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.target }}
-        quiet: true
+        that: _opencode_sandbox_changed | length == 0
+        fail_msg: "Not links to ~/.agents: {{ _opencode_sandbox_changed | join(', ') }}"
       vars:
-        _opencode_sandbox_link_stat: "{{ __opencode_sandbox_link_paths.results[__opencode_sandbox_index].stat }}"
-      loop: "{{ _opencode_sandbox_links }}"
-      loop_control:
-        loop_var: __opencode_sandbox_link
-        index_var: __opencode_sandbox_index
-        label: "{{ __opencode_sandbox_link.path }}"
-      when: __opencode_sandbox_link_targets.results[__opencode_sandbox_index].stat.exists
+        _opencode_sandbox_changed: >-
+          {{ (__opencode_sandbox_link_removals.results + __opencode_sandbox_link_results.results) | select('changed')
+             | map(attribute='__opencode_sandbox_link.path') | unique | list }}
 
 # Asks opencode itself what it loads, so a wrong path or link shows up here
 - name: Check that opencode reads the shared skills and commands
@@ -129,7 +104,7 @@
           - __opencode_sandbox_skills.rc == 0
           - __opencode_sandbox_loaded_config.rc == 0
           - _opencode_sandbox_missing_skills | length == 0
-          - not (opencode_sandbox_enable_links | default(true) | bool) or _opencode_sandbox_missing_commands | length == 0
+          - not (opencode_sandbox_enable_links | bool) or _opencode_sandbox_missing_commands | length == 0
         fail_msg: >-
           opencode doesn't load these skills: {{ _opencode_sandbox_missing_skills }}, commands:
           {{ _opencode_sandbox_missing_commands }} ({{ __opencode_sandbox_skills.stderr | default('') }}

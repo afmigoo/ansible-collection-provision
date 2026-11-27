@@ -30,61 +30,33 @@
           - _claude_sandbox_current | combine(claude_sandbox_settings, recursive=true) == _claude_sandbox_current
         fail_msg: >-
           claude --version: {{ __claude_sandbox_version.stdout | default('') }}{{ __claude_sandbox_version.msg | default('') }}
-          (expected {{ claude_sandbox_version }}); settings.json has claude_sandbox_settings:
-          {{ _claude_sandbox_current | combine(claude_sandbox_settings, recursive=true) == _claude_sandbox_current }}
+          (expected {{ claude_sandbox_version }}), or settings.json lacks some of claude_sandbox_settings
       vars:
         _claude_sandbox_current: >-
           {{ (__claude_sandbox_settings_file.content | b64decode | from_json)
              if __claude_sandbox_settings_file.content is defined else {} }}
 
+# Re-runs the links in check mode: any change means a link is missing or points elsewhere. check_mode here doesn't set
+# ansible_check_mode, so a real file or directory at a link's path fails the link task
 - name: Check the links to the shared context
-  when: claude_sandbox_enable_links | default(true) | bool
+  when: claude_sandbox_enable_links | bool
   tags: [claude_sandbox, claude_sandbox_verify]
   block:
-    - name: Stat the shared context
-      ansible.builtin.stat:
-        path: "{{ claude_sandbox_home }}/{{ __claude_sandbox_link.target }}"
-        get_checksum: false
-      loop: "{{ _claude_sandbox_links }}"
-      loop_control:
-        loop_var: __claude_sandbox_link
-        label: "{{ __claude_sandbox_link.target }}"
-      register: __claude_sandbox_link_targets
+    - name: Re-run the links in check mode
+      ansible.builtin.import_tasks: _main/links.yml
+      check_mode: true
 
-    - name: Stat the links
-      ansible.builtin.stat:
-        path: "{{ claude_sandbox_home }}/{{ __claude_sandbox_link.path }}"
-        follow: false
-        get_checksum: false
-      loop: "{{ _claude_sandbox_links }}"
-      loop_control:
-        loop_var: __claude_sandbox_link
-        label: "{{ __claude_sandbox_link.path }}"
-      register: __claude_sandbox_link_paths
-
-    # Only targets that exist get a link
     - name: Assert the links
       ansible.builtin.assert:
-        that:
-          - _claude_sandbox_link_stat.islnk | default(false)
-          - _claude_sandbox_link_stat.lnk_source | default('') == claude_sandbox_home ~ '/' ~ __claude_sandbox_link.target
-        fail_msg: >-
-          {{ claude_sandbox_home }}/{{ __claude_sandbox_link.path }} isn't a link to
-          {{ claude_sandbox_home }}/{{ __claude_sandbox_link.target }}
-        quiet: true
+        that: _claude_sandbox_changed | length == 0
+        fail_msg: "Not links to ~/.agents: {{ _claude_sandbox_changed | join(', ') }}"
       vars:
-        _claude_sandbox_link_stat: "{{ __claude_sandbox_link_paths.results[__claude_sandbox_index].stat }}"
-      loop: "{{ _claude_sandbox_links }}"
-      loop_control:
-        loop_var: __claude_sandbox_link
-        index_var: __claude_sandbox_index
-        label: "{{ __claude_sandbox_link.path }}"
-      when: __claude_sandbox_link_targets.results[__claude_sandbox_index].stat.exists
+        _claude_sandbox_changed: >-
+          {{ (__claude_sandbox_link_removals.results + __claude_sandbox_link_results.results) | select('changed')
+             | map(attribute='__claude_sandbox_link.path') | unique | list }}
 
 - name: Check the plugins
-  when:
-    - claude_sandbox_enable_plugins | default(true) | bool
-    - claude_sandbox_marketplaces | length > 0 or claude_sandbox_plugins | length > 0
+  when: claude_sandbox_marketplaces | length > 0 or claude_sandbox_plugins | length > 0
   tags: [claude_sandbox, claude_sandbox_verify]
   block:
     - name: List the plugin marketplaces

@@ -10,6 +10,7 @@
   loop_control:
     loop_var: __opencode_sandbox_dir
 
+# No diff: the config may hold API keys
 - name: Write the opencode config
   ansible.builtin.copy:
     content: "{{ opencode_sandbox_config | to_nice_json(indent=2) }}\n"
@@ -17,4 +18,5 @@
     owner: "{{ opencode_sandbox_user }}"
     group: "{{ opencode_sandbox_user }}"
     mode: "0644"
+  diff: false
   when: opencode_sandbox_config | length > 0

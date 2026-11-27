@@ -70,14 +70,12 @@
 
 - name: Remember the sops-encrypted sources
   ansible.builtin.set_fact:
-    _files_sops_srcs: >-
+    _files_sops_srcs: "{{ _files_sops_items | map(attribute='src') | select('defined') | list }}"
+    _files_sops_templates: "{{ _files_sops_items | map(attribute='template') | select('defined') | list }}"
+  vars:
+    _files_sops_items: >-
       {{ __files_detect_mac.results | zip(__files_detect_date.results)
-         | selectattr('0.rc', 'eq', 0) | selectattr('1.rc', 'eq', 0) | map(attribute='0.__files_item')
-         | map(attribute='src') | select('defined') | list }}
-    _files_sops_templates: >-
-      {{ __files_detect_mac.results | zip(__files_detect_date.results)
-         | selectattr('0.rc', 'eq', 0) | selectattr('1.rc', 'eq', 0) | map(attribute='0.__files_item')
-         | map(attribute='template') | select('defined') | list }}
+         | selectattr('0.rc', 'eq', 0) | selectattr('1.rc', 'eq', 0) | map(attribute='0.__files_item') | list }}
 
 # The template module reads vault-encrypted templates but knows nothing of sops
 - name: Reject sops-encrypted templates

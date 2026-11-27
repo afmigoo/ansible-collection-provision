@@ -3,7 +3,6 @@
 # where a service expects content. Entries that existed before keep whatever this run already wrote to them
 - name: Copy the content
   block:
-    # Creates the intermediate directories with the same owner and mode
     - name: Create missing directories
       ansible.builtin.file:
         path: "{{ __files_item.dest | dirname }}"
@@ -33,8 +32,7 @@
         label: "{{ __files_item.dest }}"
 
     # A sops-encrypted source (detected in preparation) is copied from the community.sops lookup, anything else (plain
-    # or vault-encrypted) with copy, which decrypts vault itself. No diffs: they would show the decrypted content.
-    # The touch above made every new file exist, so force: false entries still get their first content
+    # or vault-encrypted) with copy, which decrypts vault itself. No diffs: they would show the decrypted content
     - name: Copy the sops-encrypted files
       ansible.builtin.copy:
         # rstrip=false keeps the trailing newline. Lookup results are not templated again, so braces stay as they are
@@ -43,7 +41,6 @@
         owner: "{{ __files_item.owner | default('root') }}"
         group: "{{ __files_item.group | default('root') }}"
         mode: "{{ __files_item.mode | default('0600') }}"
-        force: "{{ __files_item.force | default(true) or __files_item.dest in _files_new_dests }}"
       loop: "{{ files_list }}"
       loop_control:
         loop_var: __files_item
@@ -61,7 +58,6 @@
         owner: "{{ __files_item.owner | default('root') }}"
         group: "{{ __files_item.group | default('root') }}"
         mode: "{{ __files_item.mode | default('0600') }}"
-        force: "{{ __files_item.force | default(true) or __files_item.dest in _files_new_dests }}"
       loop: "{{ files_list }}"
       loop_control:
         loop_var: __files_item
@@ -80,7 +76,6 @@
         owner: "{{ __files_item.owner | default('root') }}"
         group: "{{ __files_item.group | default('root') }}"
         mode: "{{ __files_item.mode | default('0600') }}"
-        force: "{{ __files_item.force | default(true) or __files_item.dest in _files_new_dests }}"
         lstrip_blocks: true
       loop: "{{ files_list }}"
       loop_control:

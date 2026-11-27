@@ -103,9 +103,9 @@ argument_specs:
         default: []
         description:
           - More files for the agent, written by afmigoo.provision.files. Entries take the keys of files_list
-            (src, template or content, dest, owner, group, mode, force, create_dirs, dir_mode).
+            (src, template or content, dest, owner, group, mode, create_dirs, dir_mode).
           - A relative dest is under the agent home; owner and group default to the agent user and create_dirs to
-            true. Use force false for files that are only seeded and then edited on the host, such as memories.
+            true.
   verification:
     short_description: Verify the agent sandbox
     description:

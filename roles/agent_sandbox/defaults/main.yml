@@ -34,5 +34,5 @@ agent_sandbox_skills: []
 agent_sandbox_commands: []
 
 # More files for the agent, entries as in files_list (afmigoo.provision.files) with these defaults: a relative dest is
-# under the agent home, owner and group are the agent, create_dirs is true. force: false only seeds a missing file
+# under the agent home, owner and group are the agent, create_dirs is true
 agent_sandbox_files: []

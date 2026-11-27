@@ -27,8 +27,7 @@ files_list:
     mode: "0640"
     create_dirs: true
     dir_mode: "0750"
-  # prepare.yml writes this file first; force: false must keep its content
-  - content: "seeded content\n"
-    dest: /etc/molecule-seed.txt
+  # prepare.yml writes this file first with other content and mode; the role must overwrite both
+  - content: "desired content\n"
+    dest: /etc/molecule-changed.txt
     mode: "0644"
-    force: false

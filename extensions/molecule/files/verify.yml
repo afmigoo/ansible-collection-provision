@@ -30,8 +30,8 @@
         - {dest: /etc/molecule-sops.conf, sha1: d870296b4072a03ca76439b5949db595a689df3d, owner: root, group: root, mode: "0600"}
         - {dest: /etc/molecule-template.txt, sha1: 5e841ee02c64eb30f882676939a7b6bccc06c326, owner: root, group: root, mode: "0644"}
         - {dest: /etc/molecule-dirs/sub/content.txt, sha1: 7ca6abc5d98609e80a7c1f03f7f81fcec983877f, owner: root, group: adm, mode: "0640"}
-        # Seeded with force: false over the file prepare.yml wrote: content kept, mode set
-        - {dest: /etc/molecule-seed.txt, sha1: 5edc01128b76eb0e5fb7c0979e4b81dd893658d7, owner: root, group: root, mode: "0644"}
+        # prepare.yml changed it first: content and mode overwritten
+        - {dest: /etc/molecule-changed.txt, sha1: 20b6afa2e3becf99b50ddca8fbf8406836317916, owner: root, group: root, mode: "0644"}
       loop_control:
         loop_var: __molecule_fixture
         label: "{{ __molecule_fixture.dest }}"

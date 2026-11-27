@@ -22,10 +22,3 @@
           ansible.builtin.import_tasks: _main/links.yml
           when: opencode_sandbox_enable_links | bool
           tags: [opencode_sandbox, opencode_sandbox_links]
-
-    - name: Summary
-      ansible.builtin.debug:
-        msg: >-
-          opencode {{ opencode_sandbox_version }} installed as /usr/local/bin/opencode: sudo -iu
-          {{ opencode_sandbox_user }}, then run opencode (log in to a provider on first start)
-      tags: [opencode_sandbox]

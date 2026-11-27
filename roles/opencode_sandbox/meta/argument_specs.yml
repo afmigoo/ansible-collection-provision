@@ -8,7 +8,7 @@ argument_specs:
         reads skills from ~/.agents/skills itself.
       - Expects the agent user and ~/.agents from afmigoo.provision.agent_sandbox, which has to run first; it isn't a
         dependency.
-      - Fails instead of replacing a real file or directory where a link belongs.
+      - A file or directory at a link's path is replaced by the link.
     author: afmigoo
     options: &opencode_sandbox_options
       opencode_sandbox_enable:

@@ -28,6 +28,8 @@
     - name: Set up rootless podman for the lab users
       ansible.builtin.include_role:
         name: afmigoo.provision.podman
+        apply:
+          tags: [podman_lab]
       tags: [podman_lab]
 
     - name: Copy files

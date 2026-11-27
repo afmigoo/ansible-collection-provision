@@ -4,7 +4,6 @@
   ansible.builtin.apt:
     name:
       - git
-      - curl
       - ca-certificates
       # ssh-keygen for the agent's git SSH key
       - openssh-client

@@ -89,18 +89,13 @@ Provisioning only adds ufw rules: a port removed from the list stays open until 
 
 ### Agent sandbox
 
-The agent sandbox is split into a base role and one role per agent:
+`claude_sandbox` and `opencode_sandbox` don't depend on `agent_sandbox`, but
+expect its user (`agent_sandbox_user`, default `agent`) and `~/.agents`, so run
+`agent_sandbox` first (the playbooks do). The agent's login shell is
+`agent_sandbox_shell` (default `/bin/bash`), with `~/.local/bin` on the PATH for
+bash and fish.
 
-- `agent_sandbox` creates the agent user (`agent_sandbox_user`, default `agent`)
-  without sudo, with a private (0700) home, rootless podman and a git SSH key,
-  and the context every agent shares in `~/.agents/`: `AGENTS.md` (global rules),
-  `skills/` and `commands/`. Its login shell is `agent_sandbox_shell` (default
-  `/bin/bash`), with `~/.local/bin` on the PATH for bash and fish.
-- `claude_sandbox` and `opencode_sandbox` install one agent each and point it at
-  `~/.agents`. They don't depend on `agent_sandbox`, but expect its user and
-  `~/.agents`, so run `agent_sandbox` first (the playbooks do).
-
-`agent_sandbox` installs only the packages it needs itself (git, curl, ssh-keygen,
+`agent_sandbox` installs only the packages it needs itself (git, ssh-keygen,
 acl, rsync). Put more tools for the agent in `base_extra_packages`, which the
 `*_from_scratch` playbooks install with base:
 
@@ -141,14 +136,13 @@ agent_sandbox_files:
   - src: "{{ inventory_dir }}/../files/memories/README.md"
     dest: .agent/memories/README.md
     mode: "0644"
-    force: false     # only seed it; the agent edits it later
 ```
 
 Claude Code reads the shared context through links: `~/.claude/CLAUDE.md`,
 `~/.claude/skills` and `~/.claude/commands` point into `~/.agents`. opencode
 reads `~/.agents/skills` itself and gets links for `~/.config/opencode/AGENTS.md`
 and `~/.config/opencode/commands`. A link is only made when its target exists, and
-the roles fail rather than replace a real file or directory at a link's path.
+replaces whatever is at its path.
 
 ```yaml
 claude_sandbox_version: "2.1.280"   # or latest: installed once, never upgraded by the role
@@ -167,9 +161,7 @@ opencode_sandbox_config:            # ~/.config/opencode/opencode.json; {} leave
   autoupdate: false
 ```
 
-`claude plugin` records marketplaces and plugins in `settings.json`; those two
-keys (`extraKnownMarketplaces`, `enabledPlugins`) are kept when the role writes
-the file, any other key added on the host is replaced by `claude_sandbox_settings`.
+The role keeps the keys `claude plugin` writes to `settings.json`.
 
 The agent's git SSH key is generated on the host (`~agent/.ssh/id_ed25519`) when
 missing and never leaves it. The run ends by printing its public key; add that
@@ -211,9 +203,8 @@ files_list:
     dest: /etc/app/conf.d/app.conf
     create_dirs: true                              # create missing directories with owner, group and dir_mode
     dir_mode: "0755"                               # default 0755
-  - content: "seeded once\n"
+  - content: "inline\n"
     dest: /etc/app/notes.txt
-    force: false                                   # only write it when missing; later edits on the host stay
 ```
 
 `src` and `template` have to be absolute because a collection playbook resolves

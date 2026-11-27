@@ -51,12 +51,6 @@ argument_specs:
             type: str
             default: "0600"
             description: Mode of the file on the host, quoted (e.g. "0640").
-          force:
-            type: bool
-            default: true
-            description:
-              - Write the content on every run. When false the content is only written when the file is missing, for
-                seeded files that are edited on the host later (owner and mode are still set).
           create_dirs:
             type: bool
             default: false
@@ -71,6 +65,6 @@ argument_specs:
     short_description: Verify the copied files
     description:
       - Checks that every file in files_list is on the host with its content, owner, group and mode, by running the
-        copy in check mode. Entries with force false are only checked for existence, owner and mode.
+        copy in check mode.
     author: afmigoo
     options: *files_options

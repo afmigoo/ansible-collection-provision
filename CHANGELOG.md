@@ -9,16 +9,11 @@ per agent, and everything personal (rules, memories, skills, configs, extra tool
   podman (`agent_sandbox_enable_podman`, new), the git SSH key, and the shared context in `~/.agents/`:
   `AGENTS.md` (`agent_sandbox_global_rules` or `agent_sandbox_global_rules_template`), `skills/`
   (`agent_sandbox_skills`, from a directory on the control machine or a git repository, mirrored) and `commands/`
-  (`agent_sandbox_commands`). `agent_sandbox_files` puts any other file in the agent home through the `files` role
-  (e.g. memories seeded with `force: false`).
+  (`agent_sandbox_commands`). `agent_sandbox_files` puts any other file in the agent home through the `files` role.
   - The login shell is `agent_sandbox_shell`, default `/bin/bash` (was fish). `~/.local/bin` is on the PATH of bash
     (the stock `~/.profile`) and fish (a conf.d snippet).
-  - It installs only git, curl, ca-certificates, openssh-client, acl and rsync. The other tools (fish, tmux, vim, jq,
+  - It installs only git, ca-certificates, openssh-client, acl and rsync. The other tools (fish, tmux, vim, jq,
     ripgrep, gh, glab, age, pipx, ...) go in `base_extra_packages`.
-  - Removed: the built-in global rules, seed memories, the `/remember` command, the `ansible-roles` skill (now
-    `docs/ansible-roles/SKILL.md`), the Claude Code and opencode configs, `agent_sandbox_host_kind`,
-    `agent_sandbox_server_description`, `agent_sandbox_rebuild_description`, and sops (dropped; install it yourself if
-    you need it).
   - It no longer resets the agent's groups. It fails when the agent may run sudo.
 - New role `claude_sandbox`: installs Claude Code (`claude_sandbox_version`, also `latest`), writes
   `~/.claude/settings.json` from `claude_sandbox_settings` (no default content), links `~/.claude/CLAUDE.md`,
@@ -33,11 +28,8 @@ per agent, and everything personal (rules, memories, skills, configs, extra tool
   agent on a prepared host; `claude_sandbox_from_scratch` and `opencode_sandbox_from_scratch` add base, harden and
   files for a fresh host. `verify` covers the new roles.
 - `files`: an entry can be a `template` (rendered on the control machine; vault-encrypted templates work, sops ones are
-  rejected) or inline `content` instead of `src`; `force: false` only writes a missing file; `create_dirs` (with
-  `dir_mode`) creates missing directories.
+  rejected) or inline `content` instead of `src`; `create_dirs` (with `dir_mode`) creates missing directories.
 - `base`: `base_extra_packages` are installed together with `base_packages`.
-- Molecule: scenarios for `claude_sandbox`, `opencode_sandbox` and `vagrant_session` (Debian only); the agent scenarios
-  run `agent_sandbox` in prepare.
 
 ### Migrating from 0.4
 
@@ -56,8 +48,8 @@ per agent, and everything personal (rules, memories, skills, configs, extra tool
 
 On a host provisioned with 0.4, `~/.claude/CLAUDE.md`, `~/.claude/skills`, `~/.claude/commands`,
 `~/.config/opencode/AGENTS.md` and `~/.config/opencode/commands` are real files and directories, and the agent roles
-stop rather than replace them with links. Move anything the agents added there into `~/.agents` (or your variables),
-delete them and run again. The agent's login shell changes to `agent_sandbox_shell` on the next run.
+replace them with links to `~/.agents`. Move anything the agents added there into `~/.agents` (or your variables)
+first. The agent's login shell changes to `agent_sandbox_shell` on the next run.
 
 ## 0.4.1
 

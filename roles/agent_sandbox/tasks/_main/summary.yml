@@ -15,4 +15,4 @@
   vars:
     _agent_sandbox_pubkey: >-
       {{ (__agent_sandbox_pubkey.content | b64decode | trim)
-         if agent_sandbox_enable_ssh_key | bool and __agent_sandbox_pubkey.content is defined else 'n/a' }}
+         if __agent_sandbox_pubkey.content is defined else 'n/a' }}

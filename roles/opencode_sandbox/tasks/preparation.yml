@@ -5,10 +5,8 @@
 
 - name: Check the settings
   ansible.builtin.assert:
-    that:
-      - ansible_facts['os_family'] == 'Debian'
-      - opencode_sandbox_config is mapping
-    fail_msg: Needs Debian (got {{ ansible_facts['os_family'] }}) and opencode_sandbox_config as a dict.
+    that: ansible_facts['os_family'] == 'Debian'
+    fail_msg: Needs Debian (got {{ ansible_facts['os_family'] }}).
     quiet: true
 
 - name: Look up the agent user

@@ -5,8 +5,8 @@
   register: __claude_sandbox_settings_file
   failed_when: false
 
-# `claude plugin` records marketplaces and enabled plugins in settings.json, so those keys are kept from the file.
-# Comparing the parsed content ignores how claude formats the file when it writes it
+# Keeps the keys `claude plugin` writes; comparing parsed JSON ignores how claude formats the file.
+# No diff: the settings may hold API keys
 - name: Write the Claude Code settings
   ansible.builtin.copy:
     content: "{{ _claude_sandbox_settings | to_nice_json(indent=2) }}\n"
@@ -14,6 +14,7 @@
     owner: "{{ claude_sandbox_user }}"
     group: "{{ claude_sandbox_user }}"
     mode: "0644"
+  diff: false
   vars:
     _claude_sandbox_current: >-
       {{ (__claude_sandbox_settings_file.content | b64decode | from_json)

@@ -7,13 +7,10 @@
   ansible.builtin.assert:
     that:
       - ansible_facts['os_family'] == 'Debian'
-      - claude_sandbox_settings is mapping
-      - claude_sandbox_marketplaces | rejectattr('name', 'defined') | list | length == 0
-      - claude_sandbox_marketplaces | rejectattr('source', 'defined') | list | length == 0
       - claude_sandbox_plugins | reject('search', '.@.') | list | length == 0
     fail_msg: >-
-      Needs Debian (got {{ ansible_facts['os_family'] }}), claude_sandbox_settings as a dict, marketplaces with name
-      and source, and plugins as plugin@marketplace (got {{ claude_sandbox_plugins | reject('search', '.@.') | list }})
+      Needs Debian (got {{ ansible_facts['os_family'] }}) and plugins as plugin@marketplace (got
+      {{ claude_sandbox_plugins | reject('search', '.@.') | list }})
     quiet: true
 
 - name: Look up the agent user
@@ -38,12 +35,9 @@
       afmigoo.provision.agent_sandbox first (or set claude_sandbox_user and claude_sandbox_home)
     quiet: true
 
-- name: Note whether the agent exists
-  ansible.builtin.set_fact:
-    _claude_sandbox_ready: "{{ __claude_sandbox_getent.rc == 0 }}"
-
 - name: Set the Claude Code paths
   ansible.builtin.set_fact:
+    _claude_sandbox_ready: "{{ __claude_sandbox_getent.rc == 0 }}"
     _claude_sandbox_bin: "{{ claude_sandbox_home }}/.local/bin/claude"
     # Relative to the agent home; a link is only made when its target exists
     _claude_sandbox_links:

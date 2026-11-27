@@ -4,4 +4,4 @@ exclude_paths:
   - .ansible/
   - .git/
   # sops-encrypted test fixtures, their layout belongs to sops
-  - extensions/molecule/fixtures/
+  - extensions/molecule/fixtures/files/

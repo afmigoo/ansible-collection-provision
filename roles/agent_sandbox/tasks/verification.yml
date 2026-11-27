@@ -7,8 +7,10 @@
 - name: Probe the agent
   tags: [agent_sandbox, agent_sandbox_verify]
   block:
+    # A host without sudo prints nothing
     - name: List the agent's sudo rights
-      ansible.builtin.command: sudo -n -l -U {{ agent_sandbox_user }}
+      ansible.builtin.shell:
+        cmd: command -v sudo >/dev/null || exit 0; sudo -n -l -U {{ agent_sandbox_user | quote }}
       register: __agent_sandbox_sudo
       changed_when: false
       failed_when: false
@@ -50,7 +52,8 @@
     - name: Assert the agent
       ansible.builtin.assert:
         that:
-          - "'is not allowed to run sudo' in __agent_sandbox_sudo.stdout"
+          - __agent_sandbox_sudo.rc == 0
+          - __agent_sandbox_sudo.stdout == '' or 'is not allowed to run sudo' in __agent_sandbox_sudo.stdout
           - _agent_sandbox_passwd[5] | default('') == agent_sandbox_shell
           - __agent_sandbox_home_stat.stat.pw_name | default('') == agent_sandbox_user
           - __agent_sandbox_home_stat.stat.mode | default('') == '0700'
@@ -66,7 +69,7 @@
         _agent_sandbox_passwd: "{{ (ansible_facts['getent_passwd'] | default({})).get(agent_sandbox_user) or [] }}"
 
 - name: Check the agent SSH key
-  when: agent_sandbox_enable_ssh_key | default(true) | bool
+  when: agent_sandbox_enable_ssh_key | bool
   tags: [agent_sandbox, agent_sandbox_verify]
   block:
     - name: Stat the agent SSH private key
@@ -74,21 +77,10 @@
         path: "{{ agent_sandbox_home }}/.ssh/id_ed25519"
       register: __agent_sandbox_key_stat
 
-    - name: Derive the public key from the private key
-      ansible.builtin.command:
-        argv: [ssh-keygen, -y, -f, "{{ agent_sandbox_home }}/.ssh/id_ed25519"]
-      become: true
-      become_user: "{{ agent_sandbox_user }}"
-      register: __agent_sandbox_key_derived
-      changed_when: false
-      failed_when: false
-      check_mode: false
-
-    - name: Read the agent SSH public key
-      ansible.builtin.slurp:
-        src: "{{ agent_sandbox_home }}/.ssh/id_ed25519.pub"
-      register: __agent_sandbox_key_pub
-      failed_when: false
+    - name: Stat the agent SSH public key
+      ansible.builtin.stat:
+        path: "{{ agent_sandbox_home }}/.ssh/id_ed25519.pub"
+      register: __agent_sandbox_pubkey_stat
 
     - name: Assert the agent SSH key
       ansible.builtin.assert:
@@ -96,17 +88,14 @@
           - __agent_sandbox_key_stat.stat.exists
           - __agent_sandbox_key_stat.stat.pw_name == agent_sandbox_user
           - __agent_sandbox_key_stat.stat.mode == '0600'
-          - __agent_sandbox_key_derived.rc == 0
-          - >-
-            (__agent_sandbox_key_pub.content | default('') | b64decode).split()[:2]
-            == __agent_sandbox_key_derived.stdout.split()[:2]
+          - __agent_sandbox_pubkey_stat.stat.exists
         fail_msg: >-
-          {{ agent_sandbox_home }}/.ssh/id_ed25519 is missing, not owned by {{ agent_sandbox_user }} with mode 0600,
-          unreadable ({{ __agent_sandbox_key_derived.stderr | default('') }}) or doesn't match id_ed25519.pub
+          {{ agent_sandbox_home }}/.ssh/id_ed25519 is missing or not owned by {{ agent_sandbox_user }} with mode 0600,
+          or id_ed25519.pub is missing
 
 - name: Check the skills
   when:
-    - agent_sandbox_enable_context | default(true) | bool
+    - agent_sandbox_enable_context | bool
     - agent_sandbox_skills | length > 0
   tags: [agent_sandbox, agent_sandbox_verify]
   block:

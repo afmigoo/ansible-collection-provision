@@ -22,8 +22,7 @@ agent_sandbox_commands:
       ---
       Say hello to $ARGUMENTS.
 agent_sandbox_files:
-  # Seeded once into directories create_dirs makes, then left to the agent
+  # Into directories create_dirs makes
   - src: "{{ _agent_sandbox_test_fixtures }}/seed.md"
     dest: .agent/memories/test/seed.md
     mode: "0644"
-    force: false

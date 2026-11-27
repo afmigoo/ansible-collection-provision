@@ -10,6 +10,8 @@
       ansible.builtin.include_role:
         name: afmigoo.provision.base
         tasks_from: verification
+        apply:
+          tags: [verify]
       when: base_enable | default(false) | bool
       tags: [verify]
 
@@ -17,6 +19,8 @@
       ansible.builtin.include_role:
         name: afmigoo.provision.harden
         tasks_from: verification
+        apply:
+          tags: [verify]
       when: harden_enable | default(false) | bool
       tags: [verify]
 
@@ -24,6 +28,8 @@
       ansible.builtin.include_role:
         name: afmigoo.provision.podman
         tasks_from: verification
+        apply:
+          tags: [verify]
       when: podman_enable | default(false) | bool
       tags: [verify]
 
@@ -31,6 +37,8 @@
       ansible.builtin.include_role:
         name: afmigoo.provision.agent_sandbox
         tasks_from: verification
+        apply:
+          tags: [verify]
       when: agent_sandbox_enable | default(false) | bool
       tags: [verify]
 
@@ -38,6 +46,8 @@
       ansible.builtin.include_role:
         name: afmigoo.provision.claude_sandbox
         tasks_from: verification
+        apply:
+          tags: [verify]
       when: claude_sandbox_enable | default(false) | bool
       tags: [verify]
 
@@ -45,6 +55,8 @@
       ansible.builtin.include_role:
         name: afmigoo.provision.opencode_sandbox
         tasks_from: verification
+        apply:
+          tags: [verify]
       when: opencode_sandbox_enable | default(false) | bool
       tags: [verify]
 
@@ -52,6 +64,8 @@
       ansible.builtin.include_role:
         name: afmigoo.provision.vagrant_session
         tasks_from: verification
+        apply:
+          tags: [verify]
       when: vagrant_session_enable | default(false) | bool
       tags: [verify]
 
@@ -59,5 +73,7 @@
       ansible.builtin.include_role:
         name: afmigoo.provision.files
         tasks_from: verification
+        apply:
+          tags: [verify]
       when: files_enable | default(false) | bool
       tags: [verify]

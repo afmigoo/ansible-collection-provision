@@ -18,7 +18,7 @@
 - name: Check the skills
   ansible.builtin.assert:
     that:
-      - __agent_sandbox_skill.name is defined and __agent_sandbox_skill.name is match('^[A-Za-z0-9_][A-Za-z0-9._-]*$')
+      - __agent_sandbox_skill.name is match('^[A-Za-z0-9_][A-Za-z0-9._-]*$')
       - agent_sandbox_skills | map(attribute='name') | select('eq', __agent_sandbox_skill.name) | list | length == 1
       - (__agent_sandbox_skill.src is defined) != (__agent_sandbox_skill.git is defined)
       - __agent_sandbox_skill.src is not defined or __agent_sandbox_skill.src is abs
@@ -31,22 +31,22 @@
   loop: "{{ agent_sandbox_skills }}"
   loop_control:
     loop_var: __agent_sandbox_skill
-    label: "{{ __agent_sandbox_skill.name | default('') }}"
+    label: "{{ __agent_sandbox_skill.name }}"
 
 - name: Check the commands
   ansible.builtin.assert:
     that:
-      - __agent_sandbox_command.name is defined and __agent_sandbox_command.name is match('^[A-Za-z0-9_][A-Za-z0-9._-]*$')
+      - __agent_sandbox_command.name is match('^[A-Za-z0-9_][A-Za-z0-9._-]*$')
       - agent_sandbox_commands | map(attribute='name') | select('eq', __agent_sandbox_command.name) | list | length == 1
       - (__agent_sandbox_command.content is defined) != (__agent_sandbox_command.src is defined)
     fail_msg: >-
       agent_sandbox_commands entries need a unique name (letters, digits, . _ -) and either content or src (an
-      absolute path on the control machine), got name={{ __agent_sandbox_command.name | default('') }}
+      absolute path on the control machine), got name={{ __agent_sandbox_command.name }}
     quiet: true
   loop: "{{ agent_sandbox_commands }}"
   loop_control:
     loop_var: __agent_sandbox_command
-    label: "{{ __agent_sandbox_command.name | default('') }}"
+    label: "{{ __agent_sandbox_command.name }}"
 
 - name: Check the agent files
   ansible.builtin.assert:

@@ -26,14 +26,5 @@
 
         - name: Plugins
           ansible.builtin.import_tasks: _main/plugins.yml
-          when:
-            - claude_sandbox_enable_plugins | bool
-            - claude_sandbox_marketplaces | length > 0 or claude_sandbox_plugins | length > 0
+          when: claude_sandbox_marketplaces | length > 0 or claude_sandbox_plugins | length > 0
           tags: [claude_sandbox, claude_sandbox_plugins]
-
-        - name: Summary
-          ansible.builtin.debug:
-            msg: >-
-              Claude Code {{ claude_sandbox_version }} installed for {{ claude_sandbox_user }}: sudo -iu
-              {{ claude_sandbox_user }}, then run claude (log in on first start)
-          tags: [claude_sandbox]

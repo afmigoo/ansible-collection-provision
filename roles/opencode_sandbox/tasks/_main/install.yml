@@ -1,14 +1,10 @@
 ---
 - name: Check the installed opencode version
-  ansible.builtin.shell:
-    cmd: |
-      if [ -x /usr/local/bin/opencode ]; then
-        /usr/local/bin/opencode --version 2>&1
-      else
-        echo "not-installed"
-      fi
+  ansible.builtin.command:
+    argv: [/usr/local/bin/opencode, --version]
   register: __opencode_sandbox_version_check
   changed_when: false
+  failed_when: false
   check_mode: false
 
 # No `creates`, so an upgrade replaces the old binary
@@ -21,5 +17,5 @@
     group: root
     mode: "0755"
   when:
-    - opencode_sandbox_version not in __opencode_sandbox_version_check.stdout
+    - __opencode_sandbox_version_check.rc != 0 or opencode_sandbox_version not in __opencode_sandbox_version_check.stdout
     - not ansible_check_mode

@@ -1,0 +1,60 @@
+---
+- name: List the plugin marketplaces
+  ansible.builtin.command:
+    argv: ["{{ _claude_sandbox_bin }}", plugin, marketplace, list, --json]
+  become: true
+  become_user: "{{ claude_sandbox_user }}"
+  environment:
+    HOME: "{{ claude_sandbox_home }}"
+  register: __claude_sandbox_marketplace_list
+  changed_when: false
+  check_mode: false
+  # claude isn't installed yet in check mode on a new host
+  failed_when: __claude_sandbox_marketplace_list.rc != 0 and not ansible_check_mode
+
+- name: Add the missing plugin marketplaces
+  ansible.builtin.command:
+    argv: ["{{ _claude_sandbox_bin }}", plugin, marketplace, add, "{{ __claude_sandbox_marketplace.source }}"]
+  become: true
+  become_user: "{{ claude_sandbox_user }}"
+  environment:
+    HOME: "{{ claude_sandbox_home }}"
+  loop: "{{ claude_sandbox_marketplaces }}"
+  loop_control:
+    loop_var: __claude_sandbox_marketplace
+    label: "{{ __claude_sandbox_marketplace.name }}"
+  when: __claude_sandbox_marketplace.name not in _claude_sandbox_known_marketplaces
+  changed_when: true
+  vars:
+    _claude_sandbox_known_marketplaces: >-
+      {{ (__claude_sandbox_marketplace_list.stdout | from_json | map(attribute='name') | list)
+         if __claude_sandbox_marketplace_list.rc == 0 else [] }}
+
+- name: List the plugins
+  ansible.builtin.command:
+    argv: ["{{ _claude_sandbox_bin }}", plugin, list, --json]
+  become: true
+  become_user: "{{ claude_sandbox_user }}"
+  environment:
+    HOME: "{{ claude_sandbox_home }}"
+  register: __claude_sandbox_plugin_list
+  changed_when: false
+  check_mode: false
+  failed_when: __claude_sandbox_plugin_list.rc != 0 and not ansible_check_mode
+
+- name: Install the missing plugins
+  ansible.builtin.command:
+    argv: ["{{ _claude_sandbox_bin }}", plugin, install, --scope, user, "{{ __claude_sandbox_plugin }}"]
+  become: true
+  become_user: "{{ claude_sandbox_user }}"
+  environment:
+    HOME: "{{ claude_sandbox_home }}"
+  loop: "{{ claude_sandbox_plugins }}"
+  loop_control:
+    loop_var: __claude_sandbox_plugin
+  when: __claude_sandbox_plugin not in _claude_sandbox_installed_plugins
+  changed_when: true
+  vars:
+    _claude_sandbox_installed_plugins: >-
+      {{ (__claude_sandbox_plugin_list.stdout | from_json | map(attribute='id') | list)
+         if __claude_sandbox_plugin_list.rc == 0 else [] }}

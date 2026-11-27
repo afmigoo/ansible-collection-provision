@@ -1,0 +1,31 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    # Same users as vagrant_session_users in roles/vagrant_session/vars/test.yml
+    - name: Create the Vagrant test users
+      ansible.builtin.user:
+        name: "{{ __prepare_user }}"
+        shell: /bin/bash
+        create_home: true
+      loop: [alice, bob]
+      loop_control:
+        loop_var: __prepare_user
+
+    # The test VMs are on vagrant-libvirt's 192.168.122.0/24, the subnet of libvirt's default network inside them, so
+    # it couldn't start; move it the way the role's error message suggests
+    - name: Install libvirt
+      ansible.builtin.apt:
+        name: libvirt-daemon-system
+        update_cache: true
+
+    - name: Move the libvirt default network to 192.168.123.0/24
+      ansible.builtin.shell:
+        cmd: >-
+          set -o pipefail &&
+          virsh --connect qemu:///system net-dumpxml default | sed 's/192\.168\.122\./192.168.123./g' > /tmp/default-net.xml &&
+          virsh --connect qemu:///system net-define /tmp/default-net.xml
+        executable: /bin/bash
+      changed_when: true

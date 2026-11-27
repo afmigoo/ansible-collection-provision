@@ -34,6 +34,27 @@
       when: agent_sandbox_enable | default(false) | bool
       tags: [verify]
 
+    - name: Verify Claude Code
+      ansible.builtin.include_role:
+        name: afmigoo.provision.claude_sandbox
+        tasks_from: verification
+      when: claude_sandbox_enable | default(false) | bool
+      tags: [verify]
+
+    - name: Verify opencode
+      ansible.builtin.include_role:
+        name: afmigoo.provision.opencode_sandbox
+        tasks_from: verification
+      when: opencode_sandbox_enable | default(false) | bool
+      tags: [verify]
+
+    - name: Verify Vagrant
+      ansible.builtin.include_role:
+        name: afmigoo.provision.vagrant_session
+        tasks_from: verification
+      when: vagrant_session_enable | default(false) | bool
+      tags: [verify]
+
     - name: Verify files
       ansible.builtin.include_role:
         name: afmigoo.provision.files

@@ -1,0 +1,52 @@
+---
+- name: Gather facts
+  ansible.builtin.setup:
+    gather_subset: [min]
+
+- name: Check the settings
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == 'Debian'
+      - claude_sandbox_settings is mapping
+      - claude_sandbox_marketplaces | rejectattr('name', 'defined') | list | length == 0
+      - claude_sandbox_marketplaces | rejectattr('source', 'defined') | list | length == 0
+      - claude_sandbox_plugins | reject('search', '.@.') | list | length == 0
+    fail_msg: >-
+      Needs Debian (got {{ ansible_facts['os_family'] }}), claude_sandbox_settings as a dict, marketplaces with name
+      and source, and plugins as plugin@marketplace (got {{ claude_sandbox_plugins | reject('search', '.@.') | list }})
+    quiet: true
+
+- name: Look up the agent user
+  ansible.builtin.command:
+    argv: [getent, passwd, "{{ claude_sandbox_user }}"]
+  register: __claude_sandbox_getent
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Stat the shared agent context
+  ansible.builtin.stat:
+    path: "{{ claude_sandbox_home }}/.agents"
+  register: __claude_sandbox_context
+
+# In check mode an agent_sandbox run before this one only simulated them
+- name: Check the agent user and ~/.agents
+  ansible.builtin.assert:
+    that: ansible_check_mode or (__claude_sandbox_getent.rc == 0 and __claude_sandbox_context.stat.isdir | default(false))
+    fail_msg: >-
+      The agent user {{ claude_sandbox_user }} or {{ claude_sandbox_home }}/.agents doesn't exist; run
+      afmigoo.provision.agent_sandbox first (or set claude_sandbox_user and claude_sandbox_home)
+    quiet: true
+
+- name: Note whether the agent exists
+  ansible.builtin.set_fact:
+    _claude_sandbox_ready: "{{ __claude_sandbox_getent.rc == 0 }}"
+
+- name: Set the Claude Code paths
+  ansible.builtin.set_fact:
+    _claude_sandbox_bin: "{{ claude_sandbox_home }}/.local/bin/claude"
+    # Relative to the agent home; a link is only made when its target exists
+    _claude_sandbox_links:
+      - {path: .claude/CLAUDE.md, target: .agents/AGENTS.md}
+      - {path: .claude/skills, target: .agents/skills}
+      - {path: .claude/commands, target: .agents/commands}

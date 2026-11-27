@@ -1,8 +1,9 @@
 ---
 # Tests the files role alone: converge and verify run it with roles/files/vars/test.yml (vars_from: test), then
 # idempotence, its verification entry point and a check of the fixture contents. It copies a plain, a vault and three
-# sops-encrypted fixtures (yaml, dotenv, text); decrypting them needs the sops binary on the control machine. The
-# fixtures' age key and vault password are throwaway test secrets.
+# sops-encrypted fixtures (yaml, dotenv, text), renders a template and writes inline content (one into directories
+# create_dirs makes, one seeded with force: false over a file prepare.yml wrote); decrypting needs the sops binary on
+# the control machine. The fixtures' age key and vault password are throwaway test secrets.
 provisioner:
   name: ansible
   env:

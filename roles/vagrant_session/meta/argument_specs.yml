@@ -1,0 +1,30 @@
+---
+argument_specs:
+  main:
+    short_description: Rootless Vagrant in each user's libvirt session
+    description:
+      - Installs Vagrant and vagrant-libvirt (Debian only, Ubuntu doesn't package Vagrant) so that unprivileged users
+        run VMs, e.g. for Molecule, in their own libvirt session (qemu:///session) without root.
+      - The VMs join the system libvirt's default network (virbr0) through qemu-bridge-helper, which becomes setuid
+        root (a dpkg stat override) and may attach to virbr0 only (/etc/qemu/bridge.conf). The users join the kvm
+        group, and ~/.vagrant.d/Vagrantfile sets up session mode without synced folders, which need root.
+      - On a VM host this needs nested virtualization, and the default network's 192.168.122.0/24 must not be the
+        host's own subnet.
+    author: afmigoo
+    options: &vagrant_session_options
+      vagrant_session_enable:
+        type: bool
+        default: false
+        description: Master gate; the role does nothing unless true.
+      vagrant_session_users:
+        type: list
+        elements: str
+        default: []
+        description: Existing users that run Vagrant VMs (e.g. the agent sandbox user).
+  verification:
+    short_description: Verify the Vagrant setup
+    description:
+      - Checks that every user has the vagrant-libvirt plugin and is in the kvm group, that the libvirt default
+        network is active, and the bridge helper's setuid bit and ACL.
+    author: afmigoo
+    options: *vagrant_session_options

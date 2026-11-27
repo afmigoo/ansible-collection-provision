@@ -1,0 +1,53 @@
+---
+- name: Stat the shared context
+  ansible.builtin.stat:
+    path: "{{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.target }}"
+    get_checksum: false
+  loop: "{{ _opencode_sandbox_links }}"
+  loop_control:
+    loop_var: __opencode_sandbox_link
+    label: "{{ __opencode_sandbox_link.target }}"
+  register: __opencode_sandbox_link_targets
+
+- name: Stat the link paths
+  ansible.builtin.stat:
+    path: "{{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.path }}"
+    follow: false
+    get_checksum: false
+  loop: "{{ _opencode_sandbox_links }}"
+  loop_control:
+    loop_var: __opencode_sandbox_link
+    label: "{{ __opencode_sandbox_link.path }}"
+  register: __opencode_sandbox_link_paths
+
+# Hosts provisioned before 0.5.0 have real files there; replacing them could lose what the agent added
+- name: Refuse to replace real files with links
+  ansible.builtin.assert:
+    that: not __opencode_sandbox_link_paths.results[__opencode_sandbox_index].stat.exists | default(false)
+          or __opencode_sandbox_link_paths.results[__opencode_sandbox_index].stat.islnk | default(false)
+    fail_msg: >-
+      {{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.path }} is a real file or directory, not a link. Move what you
+      want to keep to {{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.target }} (or into agent_sandbox's variables),
+      remove it and run again
+    quiet: true
+  loop: "{{ _opencode_sandbox_links }}"
+  loop_control:
+    loop_var: __opencode_sandbox_link
+    index_var: __opencode_sandbox_index
+    label: "{{ __opencode_sandbox_link.path }}"
+  when: __opencode_sandbox_link_targets.results[__opencode_sandbox_index].stat.exists
+
+- name: Link to the shared context
+  ansible.builtin.file:
+    src: "{{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.target }}"
+    dest: "{{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.path }}"
+    state: link
+    owner: "{{ opencode_sandbox_user }}"
+    group: "{{ opencode_sandbox_user }}"
+    follow: false
+  loop: "{{ _opencode_sandbox_links }}"
+  loop_control:
+    loop_var: __opencode_sandbox_link
+    index_var: __opencode_sandbox_index
+    label: "{{ __opencode_sandbox_link.path }}"
+  when: __opencode_sandbox_link_targets.results[__opencode_sandbox_index].stat.exists

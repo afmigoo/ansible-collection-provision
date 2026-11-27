@@ -7,19 +7,119 @@
   ansible.builtin.assert:
     that:
       - ansible_facts['os_family'] == 'Debian'
-      - ansible_facts['distribution'] == 'Debian' or not (agent_sandbox_enable_vagrant | bool)
+      - not (agent_sandbox_global_rules and agent_sandbox_global_rules_template)
+      - not agent_sandbox_global_rules_template or agent_sandbox_global_rules_template is abs
     fail_msg: >-
-      Needs Debian (got {{ ansible_facts['os_family'] }}). agent_sandbox_enable_vagrant needs Debian itself (got
-      {{ ansible_facts['distribution'] }}), Ubuntu doesn't package Vagrant.
+      Needs Debian (got {{ ansible_facts['os_family'] }}). Set at most one of agent_sandbox_global_rules and
+      agent_sandbox_global_rules_template, the latter as an absolute path on the control machine.
     quiet: true
 
-- name: Set host wording
-  ansible.builtin.set_fact:
-    _agent_sandbox_host_word: "{{ 'VM' if agent_sandbox_host_kind == 'vm' else 'server' }}"
+# Names become directory and file names under ~/.agents
+- name: Check the skills
+  ansible.builtin.assert:
+    that:
+      - __agent_sandbox_skill.name is defined and __agent_sandbox_skill.name is match('^[A-Za-z0-9_][A-Za-z0-9._-]*$')
+      - agent_sandbox_skills | map(attribute='name') | select('eq', __agent_sandbox_skill.name) | list | length == 1
+      - (__agent_sandbox_skill.src is defined) != (__agent_sandbox_skill.git is defined)
+      - __agent_sandbox_skill.src is not defined or __agent_sandbox_skill.src is abs
+      - __agent_sandbox_skill.path is not defined or '..' not in __agent_sandbox_skill.path.split('/')
+    fail_msg: >-
+      agent_sandbox_skills entries need a unique name (letters, digits, . _ -) and either src (an absolute directory
+      path on the control machine) or git (with optional version and path, a subdirectory without ..), got
+      {{ __agent_sandbox_skill }}
+    quiet: true
+  loop: "{{ agent_sandbox_skills }}"
+  loop_control:
+    loop_var: __agent_sandbox_skill
+    label: "{{ __agent_sandbox_skill.name | default('') }}"
 
-- name: Set the sops download source
+- name: Check the commands
+  ansible.builtin.assert:
+    that:
+      - __agent_sandbox_command.name is defined and __agent_sandbox_command.name is match('^[A-Za-z0-9_][A-Za-z0-9._-]*$')
+      - agent_sandbox_commands | map(attribute='name') | select('eq', __agent_sandbox_command.name) | list | length == 1
+      - (__agent_sandbox_command.content is defined) != (__agent_sandbox_command.src is defined)
+    fail_msg: >-
+      agent_sandbox_commands entries need a unique name (letters, digits, . _ -) and either content or src (an
+      absolute path on the control machine), got name={{ __agent_sandbox_command.name | default('') }}
+    quiet: true
+  loop: "{{ agent_sandbox_commands }}"
+  loop_control:
+    loop_var: __agent_sandbox_command
+    label: "{{ __agent_sandbox_command.name | default('') }}"
+
+- name: Check the agent files
+  ansible.builtin.assert:
+    that:
+      - __agent_sandbox_file.dest is defined and __agent_sandbox_file.dest is string
+      - __agent_sandbox_file.dest is abs or '..' not in __agent_sandbox_file.dest.split('/')
+    fail_msg: >-
+      agent_sandbox_files entries need a dest, absolute or relative to the agent home without ..,
+      got {{ __agent_sandbox_file.dest | default('') }}
+    quiet: true
+  loop: "{{ agent_sandbox_files }}"
+  loop_control:
+    loop_var: __agent_sandbox_file
+    label: "{{ __agent_sandbox_file.dest | default('') }}"
+
+# In check mode on a new host the agent user is only simulated, and become_user can't switch to it
+- name: Look up the agent user
+  ansible.builtin.command:
+    argv: [getent, passwd, "{{ agent_sandbox_user }}"]
+  register: __agent_sandbox_getent
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Note whether tasks can run as the agent
   ansible.builtin.set_fact:
-    _agent_sandbox_sops_url: "https://github.com/getsops/sops/releases/download/v{{ agent_sandbox_sops_version }}"
-    _agent_sandbox_sops_file: >-
-      sops-v{{ agent_sandbox_sops_version }}.linux.{{ {'x86_64': 'amd64', 'aarch64': 'arm64'}[ansible_facts['architecture']] }}
-  when: agent_sandbox_enable_sops | bool
+    _agent_sandbox_user_ready: "{{ not ansible_check_mode or __agent_sandbox_getent.rc == 0 }}"
+
+# The files role runs as one include with this list; it is built here because vars passed to include_role are
+# templated inside that role
+- name: Start the agent file list
+  ansible.builtin.set_fact:
+    _agent_sandbox_files_list: >-
+      {{ (([_agent_sandbox_rules_file] if agent_sandbox_global_rules or agent_sandbox_global_rules_template else [])
+          if agent_sandbox_enable_context | bool else [])
+         + ([_agent_sandbox_fish_path_file] if agent_sandbox_shell | basename == 'fish' else []) }}
+  vars:
+    _agent_sandbox_rules_file: >-
+      {{ {'dest': agent_sandbox_home ~ '/.agents/AGENTS.md', 'owner': agent_sandbox_user, 'group': agent_sandbox_user,
+          'mode': '0644'}
+         | combine({'template': agent_sandbox_global_rules_template} if agent_sandbox_global_rules_template
+                   else {'content': agent_sandbox_global_rules}) }}
+    # bash gets ~/.local/bin from the stock ~/.profile once the directory exists, fish needs this
+    _agent_sandbox_fish_path_file:
+      dest: "{{ agent_sandbox_home }}/.config/fish/conf.d/local-bin.fish"
+      content: "fish_add_path -g $HOME/.local/bin\n"
+      owner: "{{ agent_sandbox_user }}"
+      group: "{{ agent_sandbox_user }}"
+      mode: "0644"
+      create_dirs: true
+
+- name: Add the commands to the agent file list
+  ansible.builtin.set_fact:
+    _agent_sandbox_files_list: >-
+      {{ _agent_sandbox_files_list
+         + [{'dest': agent_sandbox_home ~ '/.agents/commands/' ~ __agent_sandbox_command.name ~ '.md',
+             'owner': agent_sandbox_user, 'group': agent_sandbox_user, 'mode': '0644'}
+            | combine({'content': __agent_sandbox_command.content} if __agent_sandbox_command.content is defined
+                      else {'src': __agent_sandbox_command.src})] }}
+  loop: "{{ agent_sandbox_commands if agent_sandbox_enable_context | bool else [] }}"
+  loop_control:
+    loop_var: __agent_sandbox_command
+    label: "{{ __agent_sandbox_command.name }}"
+
+- name: Add agent_sandbox_files to the agent file list
+  ansible.builtin.set_fact:
+    _agent_sandbox_files_list: >-
+      {{ _agent_sandbox_files_list
+         + [{'owner': agent_sandbox_user, 'group': agent_sandbox_user, 'create_dirs': true}
+            | combine(__agent_sandbox_file,
+                      {'dest': __agent_sandbox_file.dest if __agent_sandbox_file.dest is abs
+                               else agent_sandbox_home ~ '/' ~ __agent_sandbox_file.dest})] }}
+  loop: "{{ agent_sandbox_files }}"
+  loop_control:
+    loop_var: __agent_sandbox_file
+    label: "{{ __agent_sandbox_file.dest }}"

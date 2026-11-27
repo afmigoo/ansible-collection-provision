@@ -1,0 +1,109 @@
+---
+- name: Install Vagrant and libvirt
+  ansible.builtin.apt:
+    name:
+      - vagrant
+      - vagrant-libvirt
+      - libvirt-daemon-system
+      - qemu-utils
+      - "{{ 'qemu-system-arm' if ansible_facts['architecture'] == 'aarch64' else 'qemu-system-x86' }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+# The system libvirt only provides the virbr0 bridge; the users have no access to it and
+# run their VMs in their own libvirt session
+- name: Check the libvirt default network
+  ansible.builtin.command: virsh --connect qemu:///system net-info default
+  register: __vagrant_session_net
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Autostart the libvirt default network
+  ansible.builtin.command: virsh --connect qemu:///system net-autostart default
+  when: __vagrant_session_net.stdout is not search('Autostart:\s+yes')
+  changed_when: true
+
+# The default network's 192.168.122.0/24 can collide with the host's own network, e.g. a VM made with
+# virt-manager's default network, and libvirt then refuses to start it
+- name: Start the libvirt default network
+  when: __vagrant_session_net.stdout is not search('Active:\s+yes')
+  block:
+    - name: Start the libvirt default network
+      ansible.builtin.command: virsh --connect qemu:///system net-start default
+      register: __vagrant_session_net_start
+      changed_when: true
+  rescue:
+    - name: Explain the failed network start
+      ansible.builtin.fail:
+        msg: >-
+          libvirt's default network didn't start: {{ __vagrant_session_net_start.stderr | default('') | trim }}.
+          If its subnet is already in use on this host, give it another one with
+          `virsh net-edit default` (e.g. 192.168.123.0/24) and run again.
+
+- name: Ensure /etc/qemu exists
+  ansible.builtin.file:
+    path: /etc/qemu
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Allow session VMs to join virbr0 and nothing else
+  ansible.builtin.copy:
+    content: "allow virbr0\n"
+    dest: /etc/qemu/bridge.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+# A stat override survives qemu upgrades, a plain chmod would not
+- name: Check the bridge helper's stat override
+  ansible.builtin.command: dpkg-statoverride --list /usr/lib/qemu/qemu-bridge-helper
+  register: __vagrant_session_statoverride
+  changed_when: false
+  failed_when: __vagrant_session_statoverride.rc > 1
+  check_mode: false
+
+- name: Make the bridge helper setuid root
+  ansible.builtin.command: dpkg-statoverride --update --add root root 4755 /usr/lib/qemu/qemu-bridge-helper
+  when: __vagrant_session_statoverride.rc == 1
+  changed_when: true
+
+- name: Ensure the kvm group exists
+  ansible.builtin.group:
+    name: kvm
+    system: true
+
+# kvm only opens /dev/kvm for Vagrant's VMs; the users' other groups stay as they are
+- name: Add the users to the kvm group
+  ansible.builtin.user:
+    name: "{{ __vagrant_session_user }}"
+    groups: [kvm]
+    append: true
+  loop: "{{ vagrant_session_users }}"
+  loop_control:
+    loop_var: __vagrant_session_user
+
+- name: Ensure ~/.vagrant.d exists
+  ansible.builtin.file:
+    path: "{{ _vagrant_session_homes[__vagrant_session_user] }}/.vagrant.d"
+    state: directory
+    owner: "{{ __vagrant_session_user }}"
+    group: "{{ __vagrant_session_user }}"
+    mode: "0755"
+  loop: "{{ vagrant_session_users }}"
+  loop_control:
+    loop_var: __vagrant_session_user
+
+- name: Install the users' Vagrant defaults
+  ansible.builtin.copy:
+    src: Vagrantfile
+    dest: "{{ _vagrant_session_homes[__vagrant_session_user] }}/.vagrant.d/Vagrantfile"
+    owner: "{{ __vagrant_session_user }}"
+    group: "{{ __vagrant_session_user }}"
+    mode: "0644"
+  loop: "{{ vagrant_session_users }}"
+  loop_control:
+    loop_var: __vagrant_session_user

@@ -10,35 +10,25 @@
       ansible.builtin.import_tasks: _main/user.yml
       tags: [agent_sandbox, agent_sandbox_user]
 
-    - name: Vagrant
-      ansible.builtin.import_tasks: _main/vagrant.yml
-      when: agent_sandbox_enable_vagrant | bool
-      tags: [agent_sandbox, agent_sandbox_vagrant]
+    - name: Rootless podman
+      ansible.builtin.import_tasks: _main/podman.yml
+      when: agent_sandbox_enable_podman | bool
+      tags: [agent_sandbox, agent_sandbox_podman]
 
     - name: Agent SSH key
       ansible.builtin.import_tasks: _main/ssh_key.yml
       when: agent_sandbox_enable_ssh_key | bool
       tags: [agent_sandbox, agent_sandbox_ssh_key]
 
-    - name: Agent configs
-      ansible.builtin.import_tasks: _main/configs.yml
-      when: agent_sandbox_enable_configs | bool
-      tags: [agent_sandbox, agent_sandbox_configs]
+    - name: Skills
+      ansible.builtin.import_tasks: _main/skills.yml
+      when: agent_sandbox_enable_context | bool
+      tags: [agent_sandbox, agent_sandbox_context]
 
-    - name: Claude Code
-      ansible.builtin.import_tasks: _main/claude.yml
-      when: agent_sandbox_enable_claude | bool
-      tags: [agent_sandbox, agent_sandbox_claude]
-
-    - name: Opencode
-      ansible.builtin.import_tasks: _main/opencode.yml
-      when: agent_sandbox_enable_opencode | bool
-      tags: [agent_sandbox, agent_sandbox_opencode]
-
-    - name: Sops
-      ansible.builtin.import_tasks: _main/sops.yml
-      when: agent_sandbox_enable_sops | bool
-      tags: [agent_sandbox, agent_sandbox_sops]
+    # Global rules, commands, the shell's PATH snippet and agent_sandbox_files
+    - name: Agent files
+      ansible.builtin.import_tasks: _main/files.yml
+      tags: [agent_sandbox, agent_sandbox_files, agent_sandbox_context]
 
     - name: Summary
       ansible.builtin.import_tasks: _main/summary.yml

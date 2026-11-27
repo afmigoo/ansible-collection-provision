@@ -40,6 +40,11 @@ argument_specs:
         elements: str
         default: [curl, wget, htop, tmux]
         description: Packages to install.
+      base_extra_packages:
+        type: list
+        elements: str
+        default: []
+        description: More packages to install, on top of base_packages.
       base_upgrade:
         type: bool
         default: false
@@ -55,3 +60,8 @@ argument_specs:
         elements: str
         default: [curl, wget, htop, tmux]
         description: Packages expected to be installed.
+      base_extra_packages:
+        type: list
+        elements: str
+        default: []
+        description: More packages expected to be installed.

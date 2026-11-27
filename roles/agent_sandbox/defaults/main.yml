@@ -2,50 +2,37 @@
 # Master gate, the role does nothing unless enabled
 agent_sandbox_enable: false
 
+# Rootless podman for the agent, set up with afmigoo.provision.podman
+agent_sandbox_enable_podman: true
 # Generate the agent's git SSH key on the host; its public key is printed at the end
 agent_sandbox_enable_ssh_key: true
-agent_sandbox_enable_configs: true
-agent_sandbox_enable_claude: true
-agent_sandbox_enable_opencode: true
-agent_sandbox_enable_sops: true
-# Vagrant with vagrant-libvirt in the agent's own libvirt session (Debian only, Ubuntu doesn't
-# package Vagrant). Adds the agent to the kvm group and makes qemu-bridge-helper setuid root,
-# limited to virbr0. Needs nested virtualization when the host is itself a VM.
-agent_sandbox_enable_vagrant: false
+# The shared agent context in ~/.agents: global rules, skills and commands
+agent_sandbox_enable_context: true
 
 agent_sandbox_user: agent
 agent_sandbox_home: "/home/{{ agent_sandbox_user }}"
+# Login shell; another shell than bash needs its package, e.g. base_extra_packages: [fish]
+agent_sandbox_shell: /bin/bash
 
-# vm or server; picks the host-specific wording of the agents' global rules
-agent_sandbox_host_kind: vm
-# Used in the global rules when agent_sandbox_host_kind is server
-agent_sandbox_server_description: a cloud server (Debian)
-# How the host gets rebuilt, used in the seeded sandbox memory
-agent_sandbox_rebuild_description: >-
-  {{ 'on `vagrant destroy`' if agent_sandbox_host_kind == 'vm' else 'when the server is recreated' }}
+# Global rules for every agent, ~/.agents/AGENTS.md: inline text, or the absolute path of a Jinja template on the
+# control machine. Set at most one; with neither the file isn't managed.
+agent_sandbox_global_rules: ""
+agent_sandbox_global_rules_template: ""
 
-agent_sandbox_packages:
-  - fish
-  - tmux
-  - vim
-  - htop
-  - git
-  - curl
-  - jq
-  - ripgrep
-  - fd-find
-  - acl
-  # ssh-keygen for the agent's git SSH key
-  - openssh-client
-  - make
-  - gh
-  - glab
-  - age
-  # Python tools go into project venvs or pipx, there is no system pip for the agent
-  - python3-venv
-  - pipx
+# Skills, mirrored to ~/.agents/skills/<name>/ (files the source no longer has are removed), e.g.
+#   - name: my-skill
+#     src: "{{ inventory_dir }}/../skills/my-skill"   # directory on the control machine, absolute
+#   - name: other-skill
+#     git: https://github.com/org/skills.git           # cloned on the host as the agent
+#     version: v1.2.0                                  # branch, tag or commit; default HEAD
+#     path: skills/other-skill                         # subdirectory holding the skill; default the repo root
+agent_sandbox_skills: []
 
-agent_sandbox_claude_version: "2.1.280"
-agent_sandbox_opencode_version: "1.18.11"
-# Installed from the upstream release binary, Debian and Ubuntu have no sops package
-agent_sandbox_sops_version: "3.13.3"
+# Slash commands, ~/.agents/commands/<name>.md, e.g.
+#   - name: remember
+#     content: "Save this to memory: $ARGUMENTS\n"   # or src: absolute path on the control machine
+agent_sandbox_commands: []
+
+# More files for the agent, entries as in files_list (afmigoo.provision.files) with these defaults: a relative dest is
+# under the agent home, owner and group are the agent, create_dirs is true. force: false only seeds a missing file
+agent_sandbox_files: []

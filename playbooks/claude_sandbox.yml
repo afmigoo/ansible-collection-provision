@@ -1,0 +1,13 @@
+---
+# Claude Code for an agent user on a prepared host: the agent user and its shared context (agent_sandbox), then
+# claude_sandbox. claude_sandbox_from_scratch also sets up and hardens a fresh host.
+- name: Provision a Claude Code agent sandbox
+  hosts: "{{ provision_hosts | default('all') }}"
+  gather_facts: false
+  become: true
+  vars:
+    agent_sandbox_enable: true
+    claude_sandbox_enable: true
+  roles:
+    - role: afmigoo.provision.agent_sandbox
+    - role: afmigoo.provision.claude_sandbox

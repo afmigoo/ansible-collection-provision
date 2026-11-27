@@ -1,34 +1,33 @@
 ---
 argument_specs:
   main:
-    short_description: Set up a Claude Code / opencode agent sandbox
+    short_description: Set up the agent user and the context shared by coding agents
     description:
-      - Creates the agent user (no sudo) with rootless podman (via afmigoo.provision.podman), installs
-        fish, claude and opencode, the agents' configs, global rules and seed memories, and the agent's git SSH key.
+      - Creates the agent user without sudo, with a private home and rootless podman (via afmigoo.provision.podman), its
+        git SSH key and the shared agent context in ~/.agents (AGENTS.md, skills/, commands/). Installs no agent;
+        afmigoo.provision.claude_sandbox and afmigoo.provision.opencode_sandbox do, and link the shared context.
+      - Installs only the packages it needs itself; add tools with base_extra_packages (afmigoo.provision.base).
       - The git SSH key is generated on the host when missing and never leaves it; its public key is printed at the
         end, to be added to git hosts by hand.
+      - Global rules, commands and agent_sandbox_files are written by afmigoo.provision.files.
     author: afmigoo
-    options:
+    options: &agent_sandbox_options
       agent_sandbox_enable:
         type: bool
         default: false
         description: Master gate; the role does nothing unless true.
+      agent_sandbox_enable_podman:
+        type: bool
+        default: true
+        description: Set up rootless podman for the agent.
       agent_sandbox_enable_ssh_key:
         type: bool
         default: true
         description: Generate the agent's git SSH key on the host (kept when it already exists).
-      agent_sandbox_enable_configs:
+      agent_sandbox_enable_context:
         type: bool
         default: true
-        description: Install agent configs, global rules and seed memories.
-      agent_sandbox_enable_claude:
-        type: bool
-        default: true
-        description: Install Claude Code.
-      agent_sandbox_enable_opencode:
-        type: bool
-        default: true
-        description: Install opencode.
+        description: Install the global rules, skills and commands in ~/.agents.
       agent_sandbox_user:
         type: str
         default: agent
@@ -37,80 +36,81 @@ argument_specs:
         type: str
         default: /home/{{ agent_sandbox_user }}
         description: Home directory of the agent user.
-      agent_sandbox_host_kind:
+      agent_sandbox_shell:
         type: str
-        default: vm
-        choices: [vm, server]
-        description: Kind of host, picks the wording of the agents' global rules.
-      agent_sandbox_server_description:
-        type: str
-        default: a cloud server (Debian)
-        description: Host description in the global rules when the host kind is server.
-      agent_sandbox_rebuild_description:
-        type: str
-        description: How the host gets rebuilt, used in the seeded sandbox memory.
-      agent_sandbox_packages:
-        type: list
-        elements: str
-        description: Packages to install for the agent.
-      agent_sandbox_claude_version:
-        type: str
-        default: "2.1.280"
-        description: Claude Code version.
-      agent_sandbox_opencode_version:
-        type: str
-        default: "1.18.11"
-        description: opencode version.
-      agent_sandbox_enable_vagrant:
-        type: bool
-        default: false
+        default: /bin/bash
         description:
-          - Install Vagrant and vagrant-libvirt for VMs in the agent's own libvirt session (Debian only).
-          - Adds the agent to the kvm group and makes qemu-bridge-helper setuid root, limited to virbr0 by /etc/qemu/bridge.conf.
-      agent_sandbox_enable_sops:
-        type: bool
-        default: true
-        description: Install sops to /usr/local/bin from the upstream release binary.
-      agent_sandbox_sops_version:
+          - Login shell of the agent; it must exist on the host (e.g. base_extra_packages [fish] for /usr/bin/fish).
+          - ~/.local/bin is put on the PATH of bash (by the stock ~/.profile) and fish (a conf.d snippet).
+      agent_sandbox_global_rules:
         type: str
-        default: "3.13.3"
-        description: sops version.
+        default: ""
+        description:
+          - Global rules for every agent, written to ~/.agents/AGENTS.md. Empty leaves the file alone.
+          - Set at most one of this and agent_sandbox_global_rules_template.
+      agent_sandbox_global_rules_template:
+        type: str
+        default: ""
+        description:
+          - Absolute path of a Jinja template on the control machine (plain or ansible-vault encrypted), rendered to
+            ~/.agents/AGENTS.md with the host's variables. Empty leaves the file alone.
+      agent_sandbox_skills:
+        type: list
+        elements: dict
+        default: []
+        description:
+          - Skills mirrored to ~/.agents/skills/<name>/ as the agent; files the source no longer has are removed.
+          - Removing an entry doesn't remove its directory.
+        options:
+          name:
+            type: str
+            required: true
+            description: Directory name under ~/.agents/skills (letters, digits, . _ -).
+          src:
+            type: str
+            description: Absolute path of the skill directory on the control machine. Set src or git.
+          git:
+            type: str
+            description: Git repository, cloned on the host to ~/.cache/agent-sandbox/skills/<name>.
+          version:
+            type: str
+            default: HEAD
+            description: Branch, tag or commit of the git repository.
+          path:
+            type: str
+            default: ""
+            description: Subdirectory of the git repository that holds the skill; empty for the repository root.
+      agent_sandbox_commands:
+        type: list
+        elements: dict
+        default: []
+        description:
+          - Slash commands, written to ~/.agents/commands/<name>.md. Removing an entry doesn't remove its file.
+        options:
+          name:
+            type: str
+            required: true
+            description: Command name (letters, digits, . _ -).
+          content:
+            type: str
+            description: Content of the command file. Set content or src.
+          src:
+            type: str
+            description: Absolute path of the command file on the control machine (plain, ansible-vault or sops).
+      agent_sandbox_files:
+        type: list
+        elements: dict
+        default: []
+        description:
+          - More files for the agent, written by afmigoo.provision.files. Entries take the keys of files_list
+            (src, template or content, dest, owner, group, mode, force, create_dirs, dir_mode).
+          - A relative dest is under the agent home; owner and group default to the agent user and create_dirs to
+            true. Use force false for files that are only seeded and then edited on the host, such as memories.
   verification:
     short_description: Verify the agent sandbox
     description:
-      - Checks that claude, opencode and sops run at the expected versions as the agent user, that it has no sudo
-        rights, that its git SSH key is valid, and the Vagrant setup when enabled.
+      - Checks that the agent has no sudo rights, its shell, home mode and ~/.local/bin on the login PATH (bash and
+        fish), its git SSH key, that every skill has a SKILL.md, and the global rules, commands and
+        agent_sandbox_files with the afmigoo.provision.files verification.
     author: afmigoo
-    options:
-      agent_sandbox_enable_ssh_key:
-        type: bool
-        default: true
-        description: Check the agent's git SSH key.
-      agent_sandbox_user:
-        type: str
-        default: agent
-        description: Name of the agent user.
-      agent_sandbox_home:
-        type: str
-        default: /home/{{ agent_sandbox_user }}
-        description: Home directory of the agent user.
-      agent_sandbox_claude_version:
-        type: str
-        default: "2.1.280"
-        description: Expected Claude Code version.
-      agent_sandbox_opencode_version:
-        type: str
-        default: "1.18.11"
-        description: Expected opencode version.
-      agent_sandbox_enable_vagrant:
-        type: bool
-        default: false
-        description: Check Vagrant.
-      agent_sandbox_enable_sops:
-        type: bool
-        default: true
-        description: Check sops.
-      agent_sandbox_sops_version:
-        type: str
-        default: "3.13.3"
-        description: Expected sops version.
+    options: *agent_sandbox_options

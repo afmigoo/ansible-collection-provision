@@ -1,0 +1,44 @@
+---
+- name: Gather facts
+  ansible.builtin.setup:
+    gather_subset: [min]
+
+- name: Check the settings
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == 'Debian'
+      - opencode_sandbox_config is mapping
+    fail_msg: Needs Debian (got {{ ansible_facts['os_family'] }}) and opencode_sandbox_config as a dict.
+    quiet: true
+
+- name: Look up the agent user
+  ansible.builtin.command:
+    argv: [getent, passwd, "{{ opencode_sandbox_user }}"]
+  register: __opencode_sandbox_getent
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Stat the shared agent context
+  ansible.builtin.stat:
+    path: "{{ opencode_sandbox_home }}/.agents"
+  register: __opencode_sandbox_context
+
+# In check mode an agent_sandbox run before this one only simulated them
+- name: Check the agent user and ~/.agents
+  ansible.builtin.assert:
+    that: ansible_check_mode or (__opencode_sandbox_getent.rc == 0 and __opencode_sandbox_context.stat.isdir | default(false))
+    fail_msg: >-
+      The agent user {{ opencode_sandbox_user }} or {{ opencode_sandbox_home }}/.agents doesn't exist; run
+      afmigoo.provision.agent_sandbox first (or set opencode_sandbox_user and opencode_sandbox_home)
+    quiet: true
+
+- name: Set the opencode paths
+  ansible.builtin.set_fact:
+    _opencode_sandbox_ready: "{{ __opencode_sandbox_getent.rc == 0 }}"
+    # Relative to the agent home; a link is only made when its target exists. opencode reads global rules from
+    # ~/.config/opencode/AGENTS.md (or ~/.claude/CLAUDE.md) and commands from ~/.config/opencode/commands, but
+    # skills from ~/.agents/skills directly
+    _opencode_sandbox_links:
+      - {path: .config/opencode/AGENTS.md, target: .agents/AGENTS.md}
+      - {path: .config/opencode/commands, target: .agents/commands}

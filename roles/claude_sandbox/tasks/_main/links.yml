@@ -1,0 +1,53 @@
+---
+- name: Stat the shared context
+  ansible.builtin.stat:
+    path: "{{ claude_sandbox_home }}/{{ __claude_sandbox_link.target }}"
+    get_checksum: false
+  loop: "{{ _claude_sandbox_links }}"
+  loop_control:
+    loop_var: __claude_sandbox_link
+    label: "{{ __claude_sandbox_link.target }}"
+  register: __claude_sandbox_link_targets
+
+- name: Stat the link paths
+  ansible.builtin.stat:
+    path: "{{ claude_sandbox_home }}/{{ __claude_sandbox_link.path }}"
+    follow: false
+    get_checksum: false
+  loop: "{{ _claude_sandbox_links }}"
+  loop_control:
+    loop_var: __claude_sandbox_link
+    label: "{{ __claude_sandbox_link.path }}"
+  register: __claude_sandbox_link_paths
+
+# Hosts provisioned before 0.5.0 have real files there; replacing them could lose what the agent added
+- name: Refuse to replace real files with links
+  ansible.builtin.assert:
+    that: not __claude_sandbox_link_paths.results[__claude_sandbox_index].stat.exists | default(false)
+          or __claude_sandbox_link_paths.results[__claude_sandbox_index].stat.islnk | default(false)
+    fail_msg: >-
+      {{ claude_sandbox_home }}/{{ __claude_sandbox_link.path }} is a real file or directory, not a link. Move what you
+      want to keep to {{ claude_sandbox_home }}/{{ __claude_sandbox_link.target }} (or into agent_sandbox's variables),
+      remove it and run again
+    quiet: true
+  loop: "{{ _claude_sandbox_links }}"
+  loop_control:
+    loop_var: __claude_sandbox_link
+    index_var: __claude_sandbox_index
+    label: "{{ __claude_sandbox_link.path }}"
+  when: __claude_sandbox_link_targets.results[__claude_sandbox_index].stat.exists
+
+- name: Link to the shared context
+  ansible.builtin.file:
+    src: "{{ claude_sandbox_home }}/{{ __claude_sandbox_link.target }}"
+    dest: "{{ claude_sandbox_home }}/{{ __claude_sandbox_link.path }}"
+    state: link
+    owner: "{{ claude_sandbox_user }}"
+    group: "{{ claude_sandbox_user }}"
+    follow: false
+  loop: "{{ _claude_sandbox_links }}"
+  loop_control:
+    loop_var: __claude_sandbox_link
+    index_var: __claude_sandbox_index
+    label: "{{ __claude_sandbox_link.path }}"
+  when: __claude_sandbox_link_targets.results[__claude_sandbox_index].stat.exists

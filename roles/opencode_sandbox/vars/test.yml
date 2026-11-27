@@ -1,0 +1,6 @@
+---
+# Test vars for the Molecule scenario, loaded with vars_from: test; the role itself never loads them
+opencode_sandbox_enable: true
+opencode_sandbox_config:
+  $schema: https://opencode.ai/config.json
+  autoupdate: false

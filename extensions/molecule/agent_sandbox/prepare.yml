@@ -1,0 +1,29 @@
+---
+# An agent user that already exists, with a file the local test skill doesn't have: the role must keep the user and
+# remove the stale file
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Create the agent user
+      ansible.builtin.user:
+        name: agent
+        shell: /bin/bash
+        create_home: true
+
+    - name: Create the local test skill's directory
+      ansible.builtin.file:
+        path: /home/agent/.agents/skills/local-skill
+        state: directory
+        owner: agent
+        group: agent
+        mode: "0755"
+
+    - name: Leave a stale file in the local test skill
+      ansible.builtin.copy:
+        content: "stale\n"
+        dest: /home/agent/.agents/skills/local-skill/stale.md
+        owner: agent
+        group: agent
+        mode: "0644"

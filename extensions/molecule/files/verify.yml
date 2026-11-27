@@ -11,7 +11,8 @@
         vars_from: test
 
 # The role's own verification compares the host with a fresh copy, which can't catch a wrong decryption. Check the
-# fixtures against the checksums of their plaintext (sops.yaml as sops re-serializes it)
+# fixtures against the checksums of their plaintext (sops.yaml as sops re-serializes it), and the directories
+# create_dirs made
 - name: Verify the fixture contents
   hosts: all
   gather_facts: false
@@ -27,6 +28,10 @@
         - {dest: /etc/molecule-sops.yaml, sha1: c1a98652909f1217956b0276d276e8ada4a9627d, owner: root, group: root, mode: "0600"}
         - {dest: /etc/molecule-sops.env, sha1: 0102a4fe1887f1cffd2fed971062f65a5f3ca65a, owner: root, group: adm, mode: "0640"}
         - {dest: /etc/molecule-sops.conf, sha1: d870296b4072a03ca76439b5949db595a689df3d, owner: root, group: root, mode: "0600"}
+        - {dest: /etc/molecule-template.txt, sha1: 5e841ee02c64eb30f882676939a7b6bccc06c326, owner: root, group: root, mode: "0644"}
+        - {dest: /etc/molecule-dirs/sub/content.txt, sha1: 7ca6abc5d98609e80a7c1f03f7f81fcec983877f, owner: root, group: adm, mode: "0640"}
+        # Seeded with force: false over the file prepare.yml wrote: content kept, mode set
+        - {dest: /etc/molecule-seed.txt, sha1: 5edc01128b76eb0e5fb7c0979e4b81dd893658d7, owner: root, group: root, mode: "0644"}
       loop_control:
         loop_var: __molecule_fixture
         label: "{{ __molecule_fixture.dest }}"
@@ -45,3 +50,24 @@
       loop_control:
         loop_var: __molecule_result
         label: "{{ __molecule_result.__molecule_fixture.dest }}"
+
+    - name: Stat the directories create_dirs made
+      ansible.builtin.stat:
+        path: "{{ __molecule_dir }}"
+      loop: [/etc/molecule-dirs, /etc/molecule-dirs/sub]
+      loop_control:
+        loop_var: __molecule_dir
+      register: __molecule_dir_stat
+
+    - name: Assert the directories create_dirs made
+      ansible.builtin.assert:
+        that:
+          - __molecule_result.stat.isdir | default(false)
+          - __molecule_result.stat.gr_name | default('') == 'adm'
+          - __molecule_result.stat.mode | default('') == '0750'
+        fail_msg: "{{ __molecule_result.__molecule_dir }} is missing or doesn't have group adm and mode 0750"
+        quiet: true
+      loop: "{{ __molecule_dir_stat.results }}"
+      loop_control:
+        loop_var: __molecule_result
+        label: "{{ __molecule_result.__molecule_dir }}"

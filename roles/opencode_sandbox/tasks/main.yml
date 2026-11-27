@@ -1,0 +1,31 @@
+---
+- name: Opencode sandbox
+  when: opencode_sandbox_enable | bool
+  block:
+    - name: Preparation
+      ansible.builtin.import_tasks: preparation.yml
+      tags: [opencode_sandbox, always]
+
+    - name: Install opencode
+      ansible.builtin.import_tasks: _main/install.yml
+      tags: [opencode_sandbox, opencode_sandbox_install]
+
+    # In check mode on a new host the agent user is only simulated, so there is nothing to check against
+    - name: Opencode config
+      when: _opencode_sandbox_ready | bool
+      block:
+        - name: Config file
+          ansible.builtin.import_tasks: _main/config.yml
+          tags: [opencode_sandbox, opencode_sandbox_config]
+
+        - name: Links to the shared context
+          ansible.builtin.import_tasks: _main/links.yml
+          when: opencode_sandbox_enable_links | bool
+          tags: [opencode_sandbox, opencode_sandbox_links]
+
+    - name: Summary
+      ansible.builtin.debug:
+        msg: >-
+          opencode {{ opencode_sandbox_version }} installed as /usr/local/bin/opencode: sudo -iu
+          {{ opencode_sandbox_user }}, then run opencode (log in to a provider on first start)
+      tags: [opencode_sandbox]

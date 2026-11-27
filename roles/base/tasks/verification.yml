@@ -15,8 +15,8 @@
   ansible.builtin.assert:
     that:
       - __base_resolve.rc == 0
-      - base_packages | difference(ansible_facts['packages'].keys()) | length == 0
+      - (base_packages + base_extra_packages) | difference(ansible_facts['packages'].keys()) | length == 0
     fail_msg: >-
       DNS lookup rc={{ __base_resolve.rc }}, missing packages:
-      {{ base_packages | difference(ansible_facts['packages'].keys()) }}
+      {{ (base_packages + base_extra_packages) | difference(ansible_facts['packages'].keys()) }}
   tags: [base, base_verify]

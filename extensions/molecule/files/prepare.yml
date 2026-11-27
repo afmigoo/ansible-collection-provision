@@ -1,0 +1,14 @@
+---
+# A seeded file (force: false in roles/files/vars/test.yml) that was edited on the host must keep its content
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Write the edited seed file
+      ansible.builtin.copy:
+        content: "edited on the host\n"
+        dest: /etc/molecule-seed.txt
+        owner: root
+        group: root
+        mode: "0600"

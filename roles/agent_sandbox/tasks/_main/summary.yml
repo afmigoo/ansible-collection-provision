@@ -10,8 +10,7 @@
 - name: Show how to use the sandbox
   ansible.builtin.debug:
     msg:
-      - "agent-sandbox ready: claude v{{ agent_sandbox_claude_version }}, opencode v{{ agent_sandbox_opencode_version }}"
-      - "ssh to {{ inventory_hostname }}, then: sudo -iu {{ agent_sandbox_user }}, and run claude or opencode (log in on first start)"
+      - "agent sandbox ready: ssh to {{ inventory_hostname }}, then: sudo -iu {{ agent_sandbox_user }}"
       - "agent SSH public key (add it to your git hosts): {{ _agent_sandbox_pubkey }}"
   vars:
     _agent_sandbox_pubkey: >-

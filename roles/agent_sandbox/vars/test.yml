@@ -1,4 +1,29 @@
 ---
 # Test vars for the Molecule scenario, loaded with vars_from: test; the role itself never loads them
 agent_sandbox_enable: true
-agent_sandbox_host_kind: vm
+_agent_sandbox_test_fixtures: "{{ lookup('ansible.builtin.env', 'MOLECULE_SCENARIO_DIRECTORY') }}/../fixtures/agent_sandbox"
+agent_sandbox_global_rules: |
+  # Global rules (Molecule test)
+
+  Run `git status` before assuming the working tree is yours.
+agent_sandbox_skills:
+  - name: local-skill
+    src: "{{ _agent_sandbox_test_fixtures }}/skills/local-skill"
+  # A small skill from a public repo, pinned to a commit
+  - name: brand-guidelines
+    git: https://github.com/anthropics/skills.git
+    version: e4bb5d960d87126ff3b3a8af1a104b7db67560ba
+    path: skills/brand-guidelines
+agent_sandbox_commands:
+  - name: hello
+    content: |
+      ---
+      description: Say hello
+      ---
+      Say hello to $ARGUMENTS.
+agent_sandbox_files:
+  # Seeded once into directories create_dirs makes, then left to the agent
+  - src: "{{ _agent_sandbox_test_fixtures }}/seed.md"
+    dest: .agent/memories/test/seed.md
+    mode: "0644"
+    force: false

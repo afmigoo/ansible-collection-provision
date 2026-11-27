@@ -1,27 +1,60 @@
 ---
-- name: Install agent packages
+# Only what this role itself uses; more tools go in base_extra_packages
+- name: Install the agent sandbox packages
   ansible.builtin.apt:
-    name: "{{ agent_sandbox_packages }}"
+    name:
+      - git
+      - curl
+      - ca-certificates
+      # ssh-keygen for the agent's git SSH key
+      - openssh-client
+      # setfacl, so Ansible can become the agent
+      - acl
+      # mirrors git skills into ~/.agents/skills
+      - rsync
     state: present
     update_cache: true
     cache_valid_time: 3600
 
-- name: Ensure the kvm group exists
-  ansible.builtin.group:
-    name: kvm
-    system: true
-  when: agent_sandbox_enable_vagrant | bool
+- name: Stat the agent shell
+  ansible.builtin.stat:
+    path: "{{ agent_sandbox_shell }}"
+  register: __agent_sandbox_shell_stat
 
+# useradd accepts any path, and a missing shell locks the agent out of sudo -iu
+- name: Check the agent shell
+  ansible.builtin.assert:
+    that: __agent_sandbox_shell_stat.stat.exists or ansible_check_mode
+    fail_msg: >-
+      agent_sandbox_shell {{ agent_sandbox_shell }} doesn't exist; install its package first, e.g. with
+      base_extra_packages: [{{ agent_sandbox_shell | basename }}] (afmigoo.provision.base)
+    quiet: true
+
+# No groups are managed: a new user gets no supplementary groups, so no sudo, and other roles (e.g. vagrant_session)
+# may add groups such as kvm. The check below refuses sudo rights however they were given
 - name: Create the agent user
   ansible.builtin.user:
     name: "{{ agent_sandbox_user }}"
     home: "{{ agent_sandbox_home }}"
-    shell: /usr/bin/fish
+    shell: "{{ agent_sandbox_shell }}"
     create_home: true
-    # No supplementary groups, in particular not sudo: the agent owns its home and nothing else.
-    # kvm only opens /dev/kvm for Vagrant's VMs.
-    groups: "{{ ['kvm'] if agent_sandbox_enable_vagrant | bool else [] }}"
-    append: false
+
+- name: List the agent's sudo rights
+  ansible.builtin.shell:
+    cmd: command -v sudo >/dev/null || exit 0; sudo -n -l -U {{ agent_sandbox_user | quote }}
+  register: __agent_sandbox_sudo
+  changed_when: false
+  check_mode: false
+  when: _agent_sandbox_user_ready | bool
+
+- name: Refuse an agent with sudo rights
+  ansible.builtin.assert:
+    that: __agent_sandbox_sudo.stdout == '' or 'is not allowed to run sudo' in __agent_sandbox_sudo.stdout
+    fail_msg: >-
+      {{ agent_sandbox_user }} may run sudo ({{ __agent_sandbox_sudo.stdout_lines | first | default('') }}); remove
+      it from the sudo group or sudoers, the agent must not have root
+    quiet: true
+  when: _agent_sandbox_user_ready | bool
 
 # The same mode devsec os_hardening enforces on regular users' homes, which runs before this user exists
 - name: Keep the agent home private
@@ -32,10 +65,18 @@
     group: "{{ agent_sandbox_user }}"
     mode: "0700"
 
-- name: Set up rootless podman for the agent
-  ansible.builtin.include_role:
-    name: afmigoo.provision.podman
-  vars:
-    podman_enable: true
-    podman_rootless_users:
-      - "{{ agent_sandbox_user }}"
+# ~/.local/bin: the stock ~/.profile puts it on bash's PATH only when it exists at login.
+# ~/.agents: claude_sandbox and opencode_sandbox check for it
+- name: Create the agent's base directories
+  ansible.builtin.file:
+    path: "{{ agent_sandbox_home }}/{{ __agent_sandbox_dir }}"
+    state: directory
+    owner: "{{ agent_sandbox_user }}"
+    group: "{{ agent_sandbox_user }}"
+    mode: "0755"
+  loop:
+    - .local
+    - .local/bin
+    - .agents
+  loop_control:
+    loop_var: __agent_sandbox_dir

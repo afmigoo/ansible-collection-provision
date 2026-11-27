@@ -3,6 +3,19 @@
 # where a service expects content. Entries that existed before keep whatever this run already wrote to them
 - name: Copy the content
   block:
+    # Creates the intermediate directories with the same owner and mode
+    - name: Create missing directories
+      ansible.builtin.file:
+        path: "{{ __files_item.dest | dirname }}"
+        state: directory
+        owner: "{{ __files_item.owner | default('root') }}"
+        group: "{{ __files_item.group | default('root') }}"
+        mode: "{{ __files_item.dir_mode | default('0755') }}"
+      loop: "{{ _files_new_dirs }}"
+      loop_control:
+        loop_var: __files_item
+        label: "{{ __files_item.dest | dirname }}"
+
     # A new file gets its owner and mode before any content: copy would otherwise create it world-readable and only then
     # chmod it. Times are preserved, so an existing file stays unchanged when its owner and mode are right
     - name: Create missing files with their owner and mode
@@ -20,7 +33,8 @@
         label: "{{ __files_item.dest }}"
 
     # A sops-encrypted source (detected in preparation) is copied from the community.sops lookup, anything else (plain
-    # or vault-encrypted) with copy, which decrypts vault itself. No diffs: they would show the decrypted content
+    # or vault-encrypted) with copy, which decrypts vault itself. No diffs: they would show the decrypted content.
+    # The touch above made every new file exist, so force: false entries still get their first content
     - name: Copy the sops-encrypted files
       ansible.builtin.copy:
         # rstrip=false keeps the trailing newline. Lookup results are not templated again, so braces stay as they are
@@ -29,29 +43,52 @@
         owner: "{{ __files_item.owner | default('root') }}"
         group: "{{ __files_item.group | default('root') }}"
         mode: "{{ __files_item.mode | default('0600') }}"
+        force: "{{ __files_item.force | default(true) or __files_item.dest in _files_new_dests }}"
       loop: "{{ files_list }}"
       loop_control:
         loop_var: __files_item
         label: "{{ __files_item.dest }}"
       diff: false
-      when: __files_item.src in _files_sops_srcs
+      when: __files_item.src is defined and __files_item.src in _files_sops_srcs
       register: __files_sops_copy
       no_log: true
 
-    - name: Copy the plain and vault-encrypted files
+    - name: Copy the plain and vault-encrypted files and inline content
       ansible.builtin.copy:
-        src: "{{ __files_item.src }}"
+        src: "{{ __files_item.src | default(omit) }}"
+        content: "{{ __files_item.content | default(omit) }}"
         dest: "{{ __files_item.dest }}"
         owner: "{{ __files_item.owner | default('root') }}"
         group: "{{ __files_item.group | default('root') }}"
         mode: "{{ __files_item.mode | default('0600') }}"
+        force: "{{ __files_item.force | default(true) or __files_item.dest in _files_new_dests }}"
       loop: "{{ files_list }}"
       loop_control:
         loop_var: __files_item
         label: "{{ __files_item.dest }}"
       diff: false
-      when: __files_item.src not in _files_sops_srcs
+      when:
+        - __files_item.template is not defined
+        - __files_item.src is not defined or __files_item.src not in _files_sops_srcs
       register: __files_plain_copy
+
+    # template decrypts vault-encrypted templates itself; sops ones were rejected in preparation
+    - name: Render the templates
+      ansible.builtin.template:
+        src: "{{ __files_item.template }}"
+        dest: "{{ __files_item.dest }}"
+        owner: "{{ __files_item.owner | default('root') }}"
+        group: "{{ __files_item.group | default('root') }}"
+        mode: "{{ __files_item.mode | default('0600') }}"
+        force: "{{ __files_item.force | default(true) or __files_item.dest in _files_new_dests }}"
+        lstrip_blocks: true
+      loop: "{{ files_list }}"
+      loop_control:
+        loop_var: __files_item
+        label: "{{ __files_item.dest }}"
+      diff: false
+      when: __files_item.template is defined
+      register: __files_template_copy
   rescue:
     - name: Remove the files this run created
       ansible.builtin.file:

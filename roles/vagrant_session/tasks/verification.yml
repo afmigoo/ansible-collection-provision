@@ -1,0 +1,62 @@
+---
+- name: Probe the Vagrant setup
+  tags: [vagrant_session, vagrant_session_verify]
+  block:
+    - name: List the users' Vagrant plugins
+      ansible.builtin.command: vagrant plugin list
+      become: true
+      become_user: "{{ __vagrant_session_user }}"
+      loop: "{{ vagrant_session_users }}"
+      loop_control:
+        loop_var: __vagrant_session_user
+      register: __vagrant_session_plugins
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Read the kvm group
+      ansible.builtin.getent:
+        database: group
+        key: kvm
+      failed_when: false
+
+    - name: Check the libvirt default network
+      ansible.builtin.command: virsh --connect qemu:///system net-info default
+      register: __vagrant_session_net
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Stat the bridge helper
+      ansible.builtin.stat:
+        path: /usr/lib/qemu/qemu-bridge-helper
+      register: __vagrant_session_bridge_helper
+
+    - name: Read the bridge ACL
+      ansible.builtin.slurp:
+        src: /etc/qemu/bridge.conf
+      register: __vagrant_session_bridge_conf
+      failed_when: false
+
+    - name: Assert the Vagrant setup
+      ansible.builtin.assert:
+        that:
+          - _vagrant_session_without_plugin | length == 0
+          - vagrant_session_users | difference(_vagrant_session_kvm_members) | length == 0
+          - __vagrant_session_net.stdout | default('') is search('Active:\s+yes')
+          - __vagrant_session_bridge_helper.stat.mode | default('') == '4755'
+          - __vagrant_session_bridge_helper.stat.pw_name | default('') == 'root'
+          - (__vagrant_session_bridge_conf.content | default('') | b64decode | trim) == 'allow virbr0'
+        fail_msg: >-
+          users without vagrant-libvirt: {{ _vagrant_session_without_plugin }},
+          kvm group: {{ _vagrant_session_kvm_members }},
+          default network: {{ __vagrant_session_net.stdout_lines | default([]) | select('search', 'Active') | first | default('missing') }},
+          bridge helper mode: {{ __vagrant_session_bridge_helper.stat.mode | default('missing') }},
+          bridge.conf: {{ __vagrant_session_bridge_conf.content | default('') | b64decode | trim }}
+        quiet: true
+      vars:
+        _vagrant_session_without_plugin: >-
+          {{ __vagrant_session_plugins.results | rejectattr('stdout', 'search', 'vagrant-libvirt')
+             | map(attribute='__vagrant_session_user') | list }}
+        _vagrant_session_kvm_members: >-
+          {{ ((ansible_facts['getent_group'] | default({})).get('kvm') or ['', '', ''])[2].split(',') }}

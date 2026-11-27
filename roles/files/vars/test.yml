@@ -17,3 +17,18 @@ files_list:
     mode: "0640"
   - src: "{{ _files_test_fixtures }}/sops.conf"
     dest: /etc/molecule-sops.conf
+  # lstrip_blocks strips the indented block tags, so it renders to "line 1\nline 2\n"
+  - template: "{{ _files_test_fixtures }}/template.txt.j2"
+    dest: /etc/molecule-template.txt
+    mode: "0644"
+  - content: "inline content\n"
+    dest: /etc/molecule-dirs/sub/content.txt
+    group: adm
+    mode: "0640"
+    create_dirs: true
+    dir_mode: "0750"
+  # prepare.yml writes this file first; force: false must keep its content
+  - content: "seeded content\n"
+    dest: /etc/molecule-seed.txt
+    mode: "0644"
+    force: false

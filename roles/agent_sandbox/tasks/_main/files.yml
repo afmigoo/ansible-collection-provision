@@ -1,0 +1,10 @@
+---
+- name: Put the agent files in place
+  ansible.builtin.include_role:
+    name: afmigoo.provision.files
+    apply:
+      tags: [agent_sandbox, agent_sandbox_files, agent_sandbox_context]
+  vars:
+    files_enable: true
+    files_list: "{{ _agent_sandbox_files_list }}"
+  when: _agent_sandbox_files_list | length > 0

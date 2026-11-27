@@ -1,0 +1,11 @@
+---
+# Test vars for the Molecule scenario, loaded with vars_from: test; the role itself never loads them
+claude_sandbox_enable: true
+claude_sandbox_settings:
+  env:
+    DISABLE_AUTOUPDATER: "1"
+claude_sandbox_marketplaces:
+  - name: claude-plugins-official
+    source: https://github.com/anthropics/claude-plugins-official.git
+claude_sandbox_plugins:
+  - commit-commands@claude-plugins-official

@@ -1,0 +1,8 @@
+---
+# Tests the claude_sandbox role alone: converge and verify run it with roles/claude_sandbox/vars/test.yml (vars_from:
+# test), then idempotence and its verification entry point. The test vars add the official plugin marketplace and a
+# plugin from GitHub.
+# prepare.yml runs agent_sandbox for the agent user and ~/.agents with global rules, a skill and a command to link to,
+# then leaves a real file and a non-empty directory at two link paths, which the role must replace with links.
+provisioner:
+  name: ansible

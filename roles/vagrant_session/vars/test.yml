@@ -1,0 +1,5 @@
+---
+# Test vars for the Molecule scenario, loaded with vars_from: test; the role itself never loads them
+vagrant_session_enable: true
+# Created by prepare.yml
+vagrant_session_users: [alice, bob]

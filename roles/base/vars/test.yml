@@ -2,3 +2,5 @@
 # Test vars for the Molecule scenario, loaded with vars_from: test; the role itself never loads them
 base_enable: true
 base_upgrade: true
+# Exercises the extra list on top of the default base_packages
+base_extra_packages: [jq]

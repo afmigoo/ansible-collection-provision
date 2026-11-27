@@ -11,5 +11,5 @@
 
 - name: Install base packages
   ansible.builtin.apt:
-    name: "{{ base_packages }}"
+    name: "{{ base_packages + base_extra_packages }}"
     state: present

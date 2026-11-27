@@ -24,6 +24,8 @@
 - name: Apply devsec SSH hardening
   ansible.builtin.include_role:
     name: devsec.hardening.ssh_hardening
+    apply:
+      tags: [harden, harden_ssh]
   vars:
     network_ipv6_enable: "{{ not (harden_enable_ipv6_disable | bool) }}"
     sftp_enabled: "{{ harden_ssh_sftp_enabled }}"

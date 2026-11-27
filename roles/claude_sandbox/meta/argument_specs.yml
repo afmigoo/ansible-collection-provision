@@ -1,0 +1,71 @@
+---
+argument_specs:
+  main:
+    short_description: Install Claude Code for the agent user
+    description:
+      - Installs Claude Code for the agent user with the official install script, writes ~/.claude/settings.json,
+        links ~/.claude/CLAUDE.md, skills and commands to the shared context in ~/.agents, and installs plugin
+        marketplaces and plugins with `claude plugin`.
+      - Expects the agent user and ~/.agents from afmigoo.provision.agent_sandbox, which has to run first; it isn't a
+        dependency.
+      - A file or directory at a link's path is replaced by the link.
+    author: afmigoo
+    options: &claude_sandbox_options
+      claude_sandbox_enable:
+        type: bool
+        default: false
+        description: Master gate; the role does nothing unless true.
+      claude_sandbox_enable_links:
+        type: bool
+        default: true
+        description:
+          - Link ~/.claude/CLAUDE.md to ~/.agents/AGENTS.md, ~/.claude/skills to ~/.agents/skills and
+            ~/.claude/commands to ~/.agents/commands, each only when its target exists.
+      claude_sandbox_user:
+        type: str
+        default: "{{ agent_sandbox_user | default('agent') }}"
+        description: Name of the agent user.
+      claude_sandbox_home:
+        type: str
+        default: "{{ agent_sandbox_home | default('/home/' ~ claude_sandbox_user) }}"
+        description: Home directory of the agent user.
+      claude_sandbox_version:
+        type: str
+        default: "2.1.280"
+        description:
+          - Claude Code version, reinstalled when the installed one differs.
+          - latest installs the newest release when claude is missing and never upgrades it. Claude Code updates
+            itself unless the settings turn that off (env DISABLE_AUTOUPDATER "1").
+      claude_sandbox_settings:
+        type: dict
+        default: {}
+        description:
+          - Content of ~/.claude/settings.json; empty leaves the file alone.
+          - The enabledPlugins and extraKnownMarketplaces keys that `claude plugin` writes are kept from the file and
+            merged with the ones set here. Other keys added on the host are removed.
+      claude_sandbox_marketplaces:
+        type: list
+        elements: dict
+        default: []
+        description: Plugin marketplaces to add (user scope) when no marketplace of that name is configured.
+        options:
+          name:
+            type: str
+            required: true
+            description: Name the marketplace declares in its marketplace.json, used to tell whether it is added.
+          source:
+            type: str
+            required: true
+            description: What `claude plugin marketplace add` takes, e.g. a git URL, owner/repo or a path on the host.
+      claude_sandbox_plugins:
+        type: list
+        elements: str
+        default: []
+        description: Plugins to install (user scope) when missing, as plugin@marketplace. Never updated or removed.
+  verification:
+    short_description: Verify Claude Code
+    description:
+      - Checks the claude version as the agent user, that settings.json holds claude_sandbox_settings, the links to
+        ~/.agents and that the marketplaces and plugins are installed.
+    author: afmigoo
+    options: *claude_sandbox_options

@@ -1,0 +1,103 @@
+---
+- name: Preparation
+  ansible.builtin.import_tasks: preparation.yml
+  tags: [claude_sandbox, claude_sandbox_verify]
+
+- name: Probe Claude Code
+  tags: [claude_sandbox, claude_sandbox_verify]
+  block:
+    - name: Run claude --version as the agent
+      ansible.builtin.command: "{{ _claude_sandbox_bin }} --version"
+      become: true
+      become_user: "{{ claude_sandbox_user }}"
+      register: __claude_sandbox_version
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Read the Claude Code settings
+      ansible.builtin.slurp:
+        src: "{{ claude_sandbox_home }}/.claude/settings.json"
+      register: __claude_sandbox_settings_file
+      failed_when: false
+      when: claude_sandbox_settings | length > 0
+
+    - name: Assert Claude Code
+      ansible.builtin.assert:
+        that:
+          - __claude_sandbox_version.rc == 0
+          - claude_sandbox_version == 'latest' or claude_sandbox_version in __claude_sandbox_version.stdout
+          - _claude_sandbox_current | combine(claude_sandbox_settings, recursive=true) == _claude_sandbox_current
+        fail_msg: >-
+          claude --version: {{ __claude_sandbox_version.stdout | default('') }}{{ __claude_sandbox_version.msg | default('') }}
+          (expected {{ claude_sandbox_version }}), or settings.json lacks some of claude_sandbox_settings
+      vars:
+        _claude_sandbox_current: >-
+          {{ (__claude_sandbox_settings_file.content | b64decode | from_json)
+             if __claude_sandbox_settings_file.content is defined else {} }}
+
+# Re-runs the links in check mode: any change means a link is missing or points elsewhere. check_mode here doesn't set
+# ansible_check_mode, so a real file or directory at a link's path fails the link task
+- name: Check the links to the shared context
+  when: claude_sandbox_enable_links | bool
+  tags: [claude_sandbox, claude_sandbox_verify]
+  block:
+    - name: Re-run the links in check mode
+      ansible.builtin.import_tasks: _main/links.yml
+      check_mode: true
+
+    - name: Assert the links
+      ansible.builtin.assert:
+        that: _claude_sandbox_changed | length == 0
+        fail_msg: "Not links to ~/.agents: {{ _claude_sandbox_changed | join(', ') }}"
+      vars:
+        _claude_sandbox_changed: >-
+          {{ (__claude_sandbox_link_removals.results + __claude_sandbox_link_results.results) | select('changed')
+             | map(attribute='__claude_sandbox_link.path') | unique | list }}
+
+- name: Check the plugins
+  when: claude_sandbox_marketplaces | length > 0 or claude_sandbox_plugins | length > 0
+  tags: [claude_sandbox, claude_sandbox_verify]
+  block:
+    - name: List the plugin marketplaces
+      ansible.builtin.command:
+        argv: ["{{ _claude_sandbox_bin }}", plugin, marketplace, list, --json]
+      become: true
+      become_user: "{{ claude_sandbox_user }}"
+      environment:
+        HOME: "{{ claude_sandbox_home }}"
+      register: __claude_sandbox_marketplace_list
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: List the plugins
+      ansible.builtin.command:
+        argv: ["{{ _claude_sandbox_bin }}", plugin, list, --json]
+      become: true
+      become_user: "{{ claude_sandbox_user }}"
+      environment:
+        HOME: "{{ claude_sandbox_home }}"
+      register: __claude_sandbox_plugin_list
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    # A marketplace whose declared name differs from claude_sandbox_marketplaces would be added again on every run
+    - name: Assert the plugins
+      ansible.builtin.assert:
+        that:
+          - _claude_sandbox_missing_marketplaces | length == 0
+          - _claude_sandbox_missing_plugins | length == 0
+        fail_msg: >-
+          Missing marketplaces (check that name is what the marketplace declares): {{ _claude_sandbox_missing_marketplaces }},
+          missing plugins: {{ _claude_sandbox_missing_plugins }}
+      vars:
+        _claude_sandbox_missing_marketplaces: >-
+          {{ claude_sandbox_marketplaces | map(attribute='name')
+             | difference((__claude_sandbox_marketplace_list.stdout | from_json | map(attribute='name') | list)
+                          if __claude_sandbox_marketplace_list.rc == 0 else []) }}
+        _claude_sandbox_missing_plugins: >-
+          {{ claude_sandbox_plugins
+             | difference((__claude_sandbox_plugin_list.stdout | from_json | map(attribute='id') | list)
+                          if __claude_sandbox_plugin_list.rc == 0 else []) }}

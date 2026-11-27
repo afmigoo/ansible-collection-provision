@@ -1,0 +1,7 @@
+---
+# Tests the opencode_sandbox role alone: converge and verify run it with roles/opencode_sandbox/vars/test.yml
+# (vars_from: test), then idempotence and its verification entry point, which asks opencode whether it loads the
+# shared skill and command.
+# prepare.yml runs agent_sandbox for the agent user and ~/.agents with global rules, a skill and a command to link to.
+provisioner:
+  name: ansible

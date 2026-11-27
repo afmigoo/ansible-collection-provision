@@ -1,11 +1,15 @@
 ---
-- name: Look up the rootless users
+- name: Look up the users
   ansible.builtin.getent:
     database: passwd
-    key: "{{ __podman_user }}"
-  loop: "{{ podman_rootless_users }}"
-  loop_control:
-    loop_var: __podman_user
+  check_mode: false
+
+# In check mode an earlier role may only have simulated them
+- name: Check the rootless users
+  ansible.builtin.assert:
+    that: ansible_check_mode or podman_rootless_users | difference(ansible_facts['getent_passwd'].keys() | list) | length == 0
+    fail_msg: "podman_rootless_users must exist, missing: {{ podman_rootless_users | difference(ansible_facts['getent_passwd'].keys() | list) }}"
+    quiet: true
 
 - name: Read the unprivileged user namespace switch
   ansible.builtin.slurp:

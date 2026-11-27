@@ -1,0 +1,32 @@
+---
+- name: Gather facts
+  ansible.builtin.setup:
+    gather_subset: [min]
+
+- name: Check the preconditions
+  ansible.builtin.assert:
+    that: ansible_facts['distribution'] == 'Debian'
+    fail_msg: Needs Debian (got {{ ansible_facts['distribution'] }}), Ubuntu doesn't package Vagrant.
+    quiet: true
+
+- name: Look up the users
+  ansible.builtin.getent:
+    database: passwd
+  check_mode: false
+
+# In check mode an earlier role may only have simulated them
+- name: Check the users
+  ansible.builtin.assert:
+    that: ansible_check_mode or vagrant_session_users | difference(ansible_facts['getent_passwd'].keys() | list) | length == 0
+    fail_msg: "vagrant_session_users must exist, missing: {{ vagrant_session_users | difference(ansible_facts['getent_passwd'].keys() | list) }}"
+    quiet: true
+
+# A user only simulated in check mode gets the usual home
+- name: Remember the users' homes
+  ansible.builtin.set_fact:
+    _vagrant_session_homes: >-
+      {{ dict(vagrant_session_users | zip(vagrant_session_users | map('regex_replace', '^', '/home/')))
+         | combine(dict(_vagrant_session_entries | map(attribute='key') | zip(_vagrant_session_entries | map(attribute='value.4')))) }}
+  vars:
+    _vagrant_session_entries: >-
+      {{ ansible_facts['getent_passwd'] | dict2items | selectattr('key', 'in', vagrant_session_users) | list }}

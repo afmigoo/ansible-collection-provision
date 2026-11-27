@@ -2,12 +2,15 @@
 # Master gate, the role does nothing unless enabled
 files_enable: false
 
-# Files to copy from the control machine to the host, e.g.
-#   - src: "{{ inventory_dir }}/../files/app.env"   # absolute path on the control machine
-#     dest: /etc/app/app.env                         # absolute path on the host, its directory must exist
+# Files to put on the host, e.g.
+#   - src: "{{ inventory_dir }}/../files/app.env"   # absolute path on the control machine; or template/content
+#     dest: /etc/app/app.env                         # absolute path on the host
 #     owner: root                                    # default root
 #     group: root                                    # default root
 #     mode: "0600"                                   # default 0600
-# src may be plain, ansible-vault encrypted (run with a vault password) or sops-encrypted (needs the sops binary
-# and its key on the control machine). Sops files are written as `sops decrypt` prints them, see the README.
+#     create_dirs: false                             # true: create its missing directories (owner, group, dir_mode)
+#     dir_mode: "0755"                               # mode of the directories create_dirs makes
+# Each entry has exactly one of src (copied; plain, ansible-vault or sops-encrypted), template (a Jinja template on
+# the control machine, plain or ansible-vault encrypted) or content (an inline string). Sops files are written as
+# `sops decrypt` prints them, see the README.
 files_list: []

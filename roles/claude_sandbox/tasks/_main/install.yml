@@ -1,0 +1,39 @@
+---
+- name: Install curl for the install script
+  ansible.builtin.apt:
+    name: curl
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Check the installed claude version
+  ansible.builtin.command:
+    argv: ["{{ _claude_sandbox_bin }}", --version]
+  become: true
+  become_user: "{{ claude_sandbox_user }}"
+  register: __claude_sandbox_version_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Install claude via the official install script
+  ansible.builtin.shell:
+    cmd: set -o pipefail && curl -fsSL https://claude.ai/install.sh | bash -s {{ claude_sandbox_version | quote }}
+    executable: /bin/bash
+    chdir: "{{ claude_sandbox_home }}"
+  become: true
+  become_user: "{{ claude_sandbox_user }}"
+  environment:
+    HOME: "{{ claude_sandbox_home }}"
+  when: >-
+    __claude_sandbox_version_check.rc != 0
+    or (claude_sandbox_version != 'latest' and claude_sandbox_version not in __claude_sandbox_version_check.stdout)
+  changed_when: true
+
+- name: Create the Claude Code config directory
+  ansible.builtin.file:
+    path: "{{ claude_sandbox_home }}/.claude"
+    state: directory
+    owner: "{{ claude_sandbox_user }}"
+    group: "{{ claude_sandbox_user }}"
+    mode: "0755"

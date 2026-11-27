@@ -3,10 +3,11 @@ argument_specs:
   main:
     short_description: Copy files to the host
     description:
-      - Copies files from the control machine to the host. A source may be plain, ansible-vault encrypted or
-        sops-encrypted; the format is detected from its content.
+      - Puts files on the host, copied from the control machine (plain, ansible-vault encrypted or sops-encrypted; the
+        format is detected from its content), rendered from a Jinja template on the control machine (plain or
+        ansible-vault encrypted) or written from an inline string.
       - Sops-encrypted sources are decrypted with the community.sops lookup, which needs the sops binary and the
-        decryption key on the control machine. Vault-encrypted sources need a vault password.
+        decryption key on the control machine. Vault-encrypted sources and templates need a vault password.
       - Checks the sources, owners, groups and destination directories before copying, creates new files with their
         owner and mode before writing content, and never shows diffs.
     author: afmigoo
@@ -19,16 +20,25 @@ argument_specs:
         type: list
         elements: dict
         default: []
-        description: Files to copy.
+        description: Files to put on the host. Each entry has exactly one of src, template or content.
         options:
           src:
             type: str
-            required: true
-            description: Absolute path of the source on the control machine.
+            description: Absolute path of a file on the control machine to copy (plain, ansible-vault or sops-encrypted).
+          template:
+            type: str
+            description:
+              - Absolute path of a Jinja template on the control machine (plain or ansible-vault encrypted, not sops).
+              - Rendered with lstrip_blocks on, with the host's variables.
+          content:
+            type: str
+            description: Content of the file.
           dest:
             type: str
             required: true
-            description: Absolute path of a file on the host (not a directory or symlink); its directory must exist. No two entries may share it.
+            description:
+              - Absolute path of a file on the host (not a directory or symlink). No two entries may share it.
+              - Its directory must exist unless create_dirs is true.
           owner:
             type: str
             default: root
@@ -41,6 +51,16 @@ argument_specs:
             type: str
             default: "0600"
             description: Mode of the file on the host, quoted (e.g. "0640").
+          create_dirs:
+            type: bool
+            default: false
+            description:
+              - Create the missing directories of dest, with the entry's owner and group and dir_mode. Directories that
+                already exist are left as they are, and a failed run doesn't remove the ones it created.
+          dir_mode:
+            type: str
+            default: "0755"
+            description: Mode of the directories create_dirs makes, quoted.
   verification:
     short_description: Verify the copied files
     description:

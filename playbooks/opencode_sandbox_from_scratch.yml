@@ -1,0 +1,24 @@
+---
+# A fresh host: base setup (with upgrade) and hardening, then the opencode agent sandbox (what opencode_sandbox runs)
+# and files. The agent's git SSH key is generated on the host; its public key is printed at the end. Pass
+# -e harden_enable=false to skip hardening (e.g. on a local VM).
+- name: Provision a opencode agent sandbox on a fresh host
+  hosts: "{{ provision_hosts | default('all') }}"
+  gather_facts: false
+  become: true
+  vars:
+    base_enable: true
+    base_upgrade: true
+    harden_enable: true
+    # rootless podman for the agent needs unprivileged user namespaces
+    harden_os_allow_userns: true
+    agent_sandbox_enable: true
+    opencode_sandbox_enable: true
+    # Copies nothing unless files_list is set
+    files_enable: true
+  roles:
+    - role: afmigoo.provision.base
+    - role: afmigoo.provision.harden
+    - role: afmigoo.provision.agent_sandbox
+    - role: afmigoo.provision.opencode_sandbox
+    - role: afmigoo.provision.files

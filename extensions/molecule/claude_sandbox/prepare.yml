@@ -1,0 +1,30 @@
+---
+- name: Prepare
+  ansible.builtin.import_playbook: ../fixtures/prepare_agent_sandbox.yml
+
+# A real file and a directory with a file in it where links belong, as a 0.4 host has them: the role must replace both
+- name: Leave real files at the link paths
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Create the agent's real skills directory
+      ansible.builtin.file:
+        path: /home/agent/.claude/skills/old-skill
+        state: directory
+        owner: agent
+        group: agent
+        mode: "0755"
+
+    - name: Create real files at the link paths
+      ansible.builtin.copy:
+        content: "real file\n"
+        dest: "{{ __molecule_path }}"
+        owner: agent
+        group: agent
+        mode: "0644"
+      loop:
+        - /home/agent/.claude/CLAUDE.md
+        - /home/agent/.claude/skills/old-skill/SKILL.md
+      loop_control:
+        loop_var: __molecule_path

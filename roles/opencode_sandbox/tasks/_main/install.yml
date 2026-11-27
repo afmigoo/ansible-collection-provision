@@ -1,0 +1,21 @@
+---
+- name: Check the installed opencode version
+  ansible.builtin.command:
+    argv: [/usr/local/bin/opencode, --version]
+  register: __opencode_sandbox_version_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+# No `creates`, so an upgrade replaces the old binary
+- name: Install the opencode binary
+  ansible.builtin.unarchive:
+    src: "https://github.com/anomalyco/opencode/releases/download/v{{ opencode_sandbox_version }}/opencode-linux-x64.tar.gz"
+    dest: /usr/local/bin
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+  when:
+    - __opencode_sandbox_version_check.rc != 0 or opencode_sandbox_version not in __opencode_sandbox_version_check.stdout
+    - not ansible_check_mode

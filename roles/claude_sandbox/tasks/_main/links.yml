@@ -1,0 +1,56 @@
+---
+- name: Stat the shared context
+  ansible.builtin.stat:
+    path: "{{ claude_sandbox_home }}/{{ __claude_sandbox_link.target }}"
+    get_checksum: false
+  loop: "{{ _claude_sandbox_links }}"
+  loop_control:
+    loop_var: __claude_sandbox_link
+    label: "{{ __claude_sandbox_link.target }}"
+  register: __claude_sandbox_link_targets
+
+- name: Stat the link paths
+  ansible.builtin.stat:
+    path: "{{ claude_sandbox_home }}/{{ __claude_sandbox_link.path }}"
+    follow: false
+    get_checksum: false
+  loop: "{{ _claude_sandbox_links }}"
+  loop_control:
+    loop_var: __claude_sandbox_link
+    label: "{{ __claude_sandbox_link.path }}"
+  register: __claude_sandbox_link_paths
+
+# file won't replace a directory that has files in it with a link
+- name: Remove files and directories where links belong
+  ansible.builtin.file:
+    path: "{{ claude_sandbox_home }}/{{ __claude_sandbox_link.path }}"
+    state: absent
+  loop: "{{ _claude_sandbox_links }}"
+  loop_control:
+    loop_var: __claude_sandbox_link
+    index_var: __claude_sandbox_index
+    label: "{{ __claude_sandbox_link.path }}"
+  when:
+    - __claude_sandbox_link_targets.results[__claude_sandbox_index].stat.exists
+    - __claude_sandbox_link_paths.results[__claude_sandbox_index].stat.exists
+    - not __claude_sandbox_link_paths.results[__claude_sandbox_index].stat.islnk
+  register: __claude_sandbox_link_removals
+
+# In check mode the removal above only reported its change, and the path is still there
+- name: Link to the shared context
+  ansible.builtin.file:
+    src: "{{ claude_sandbox_home }}/{{ __claude_sandbox_link.target }}"
+    dest: "{{ claude_sandbox_home }}/{{ __claude_sandbox_link.path }}"
+    state: link
+    owner: "{{ claude_sandbox_user }}"
+    group: "{{ claude_sandbox_user }}"
+    follow: false
+  loop: "{{ _claude_sandbox_links }}"
+  loop_control:
+    loop_var: __claude_sandbox_link
+    index_var: __claude_sandbox_index
+    label: "{{ __claude_sandbox_link.path }}"
+  when:
+    - __claude_sandbox_link_targets.results[__claude_sandbox_index].stat.exists
+    - not (ansible_check_mode and __claude_sandbox_link_removals.results[__claude_sandbox_index] is changed)
+  register: __claude_sandbox_link_results

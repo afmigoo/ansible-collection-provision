@@ -1,13 +1,14 @@
 ---
 galaxy_info:
   author: afmigoo
-  description: Claude Code / opencode agent sandbox user with rootless podman
+  description: Agent user without sudo, with rootless podman, a git SSH key and the context shared by coding agents
   license: MIT
   min_ansible_version: "2.17"
   platforms:
     - name: Debian
       versions:
         - trixie
+        - bookworm
     - name: Ubuntu
       versions:
         - noble

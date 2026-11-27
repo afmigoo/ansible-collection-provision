@@ -1,0 +1,30 @@
+---
+- name: Claude Code sandbox
+  when: claude_sandbox_enable | bool
+  block:
+    - name: Preparation
+      ansible.builtin.import_tasks: preparation.yml
+      tags: [claude_sandbox, always]
+
+    # In check mode on a new host the agent user is only simulated, so there is nothing to check against
+    - name: Claude Code
+      when: _claude_sandbox_ready | bool
+      block:
+        - name: Install Claude Code
+          ansible.builtin.import_tasks: _main/install.yml
+          tags: [claude_sandbox, claude_sandbox_install]
+
+        - name: Settings
+          ansible.builtin.import_tasks: _main/settings.yml
+          when: claude_sandbox_settings | length > 0
+          tags: [claude_sandbox, claude_sandbox_settings]
+
+        - name: Links to the shared context
+          ansible.builtin.import_tasks: _main/links.yml
+          when: claude_sandbox_enable_links | bool
+          tags: [claude_sandbox, claude_sandbox_links]
+
+        - name: Plugins
+          ansible.builtin.import_tasks: _main/plugins.yml
+          when: claude_sandbox_marketplaces | length > 0 or claude_sandbox_plugins | length > 0
+          tags: [claude_sandbox, claude_sandbox_plugins]

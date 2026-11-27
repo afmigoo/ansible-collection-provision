@@ -18,3 +18,13 @@
       vars:
         podman_rootless_users: ["{{ agent_sandbox_user }}"]
         podman_verify_image: docker.io/library/busybox:1.37
+
+    - name: Stat the stale file prepare.yml left in the local skill
+      ansible.builtin.stat:
+        path: /home/agent/.agents/skills/local-skill/stale.md
+      register: __molecule_stale
+
+    - name: Assert the local skill was mirrored
+      ansible.builtin.assert:
+        that: not __molecule_stale.stat.exists
+        fail_msg: The local skill still has stale.md, which its source doesn't have

@@ -1,0 +1,15 @@
+---
+# Master gate, the role does nothing unless enabled. Run afmigoo.provision.agent_sandbox first
+opencode_sandbox_enable: false
+
+# Link ~/.config/opencode/AGENTS.md and commands to the shared context in ~/.agents (opencode reads
+# ~/.agents/skills itself)
+opencode_sandbox_enable_links: true
+
+opencode_sandbox_user: "{{ agent_sandbox_user | default('agent') }}"
+opencode_sandbox_home: "{{ agent_sandbox_home | default('/home/' ~ opencode_sandbox_user) }}"
+
+opencode_sandbox_version: "1.18.11"
+
+# ~/.config/opencode/opencode.json; empty leaves the file alone
+opencode_sandbox_config: {}

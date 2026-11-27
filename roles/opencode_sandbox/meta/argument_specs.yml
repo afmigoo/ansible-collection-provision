@@ -1,0 +1,46 @@
+---
+argument_specs:
+  main:
+    short_description: Install opencode for the agent user
+    description:
+      - Installs the opencode release binary to /usr/local/bin, writes ~/.config/opencode/opencode.json and links
+        ~/.config/opencode/AGENTS.md and ~/.config/opencode/commands to the shared context in ~/.agents. opencode
+        reads skills from ~/.agents/skills itself.
+      - Expects the agent user and ~/.agents from afmigoo.provision.agent_sandbox, which has to run first; it isn't a
+        dependency.
+      - A file or directory at a link's path is replaced by the link.
+    author: afmigoo
+    options: &opencode_sandbox_options
+      opencode_sandbox_enable:
+        type: bool
+        default: false
+        description: Master gate; the role does nothing unless true.
+      opencode_sandbox_enable_links:
+        type: bool
+        default: true
+        description:
+          - Link ~/.config/opencode/AGENTS.md to ~/.agents/AGENTS.md and ~/.config/opencode/commands to
+            ~/.agents/commands, each only when its target exists.
+      opencode_sandbox_user:
+        type: str
+        default: "{{ agent_sandbox_user | default('agent') }}"
+        description: Name of the agent user.
+      opencode_sandbox_home:
+        type: str
+        default: "{{ agent_sandbox_home | default('/home/' ~ opencode_sandbox_user) }}"
+        description: Home directory of the agent user.
+      opencode_sandbox_version:
+        type: str
+        default: "1.18.11"
+        description: opencode version, reinstalled when the installed one differs.
+      opencode_sandbox_config:
+        type: dict
+        default: {}
+        description: Content of ~/.config/opencode/opencode.json; empty leaves the file alone.
+  verification:
+    short_description: Verify opencode
+    description:
+      - Checks the opencode version, opencode.json, the links to ~/.agents, and asks opencode (debug skill, debug
+        config) whether it loads every skill and command in ~/.agents.
+    author: afmigoo
+    options: *opencode_sandbox_options

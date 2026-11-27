@@ -1,0 +1,11 @@
+---
+- name: Vagrant in libvirt sessions
+  when: vagrant_session_enable | bool
+  block:
+    - name: Preparation
+      ansible.builtin.import_tasks: preparation.yml
+      tags: [vagrant_session, always]
+
+    - name: Vagrant
+      ansible.builtin.import_tasks: _main/vagrant.yml
+      tags: [vagrant_session, vagrant_session_install]

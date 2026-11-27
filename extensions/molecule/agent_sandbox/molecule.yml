@@ -1,6 +1,8 @@
 ---
 # Tests the agent_sandbox role alone: converge and verify run it with roles/agent_sandbox/vars/test.yml (vars_from: test),
-# then idempotence and its verification entry point.
+# then idempotence and its verification entry point. The test vars install a local and a git skill (the latter cloned
+# from GitHub), a command, global rules and a seeded file.
+# prepare.yml creates the agent user with a stale file in the local skill, which the role must remove.
 # verify.yml also runs the podman verification for the agent, which the role sets up.
 provisioner:
   name: ansible

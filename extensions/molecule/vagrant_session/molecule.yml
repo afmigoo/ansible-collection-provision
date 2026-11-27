@@ -1,0 +1,17 @@
+---
+# Tests the vagrant_session role alone: converge and verify run it with roles/vagrant_session/vars/test.yml (vars_from:
+# test), then idempotence and its verification entry point. prepare.yml creates the users and moves libvirt's default
+# network off the test VMs' own subnet.
+# Debian only (Ubuntu doesn't package Vagrant). The verification doesn't boot a nested VM, so the test VMs need no
+# nested virtualization.
+platforms:
+  - name: molecule-debian-12
+    box: debian/bookworm64
+    cpus: 1
+    memory: 1024
+  - name: molecule-debian-13
+    box: debian/trixie64
+    cpus: 1
+    memory: 1024
+provisioner:
+  name: ansible

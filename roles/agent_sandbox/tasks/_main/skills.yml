@@ -1,0 +1,105 @@
+---
+# Created even when empty, so claude_sandbox and opencode_sandbox can link to them
+- name: Create the shared skills and commands directories
+  ansible.builtin.file:
+    path: "{{ agent_sandbox_home }}/.agents/{{ __agent_sandbox_dir }}"
+    state: directory
+    owner: "{{ agent_sandbox_user }}"
+    group: "{{ agent_sandbox_user }}"
+    mode: "0755"
+  loop: [skills, commands]
+  loop_control:
+    loop_var: __agent_sandbox_dir
+
+# Runs as the agent, so everything it creates belongs to the agent
+- name: Install the skills
+  when:
+    - agent_sandbox_skills | length > 0
+    - _agent_sandbox_user_ready | bool
+  become: true
+  become_user: "{{ agent_sandbox_user }}"
+  vars:
+    _agent_sandbox_local_skills: "{{ agent_sandbox_skills | selectattr('src', 'defined') | list }}"
+    _agent_sandbox_git_skills: "{{ agent_sandbox_skills | selectattr('git', 'defined') | list }}"
+    _agent_sandbox_skill_checkouts: "{{ agent_sandbox_home }}/.cache/agent-sandbox/skills"
+  block:
+    - name: Start the list of stale skill files
+      ansible.builtin.set_fact:
+        _agent_sandbox_stale_skill_files: []
+
+    - name: Copy the local skills
+      ansible.builtin.copy:
+        src: "{{ __agent_sandbox_skill.src | regex_replace('/*$', '/') }}"
+        dest: "{{ agent_sandbox_home }}/.agents/skills/{{ __agent_sandbox_skill.name }}/"
+        mode: preserve
+      loop: "{{ _agent_sandbox_local_skills }}"
+      loop_control:
+        loop_var: __agent_sandbox_skill
+        label: "{{ __agent_sandbox_skill.name }}"
+
+    # copy only adds and updates, so remove what the source directory no longer has
+    - name: Find the files of the local skills
+      ansible.builtin.find:
+        paths: "{{ agent_sandbox_home }}/.agents/skills/{{ __agent_sandbox_skill.name }}"
+        recurse: true
+        hidden: true
+        file_type: any
+      loop: "{{ _agent_sandbox_local_skills }}"
+      loop_control:
+        loop_var: __agent_sandbox_skill
+        label: "{{ __agent_sandbox_skill.name }}"
+      register: __agent_sandbox_skill_files
+
+    - name: Collect the files the local skills no longer have
+      ansible.builtin.set_fact:
+        _agent_sandbox_stale_skill_files: >-
+          {{ _agent_sandbox_stale_skill_files
+             + (__agent_sandbox_result.files | map(attribute='path') | reject('in', _agent_sandbox_expected) | list) }}
+      vars:
+        _agent_sandbox_expected: >-
+          {{ lookup('community.general.filetree', __agent_sandbox_result.__agent_sandbox_skill.src, wantlist=True)
+             | map(attribute='path')
+             | map('regex_replace', '^', agent_sandbox_home ~ '/.agents/skills/' ~ __agent_sandbox_result.__agent_sandbox_skill.name ~ '/')
+             | list }}
+      loop: "{{ __agent_sandbox_skill_files.results }}"
+      loop_control:
+        loop_var: __agent_sandbox_result
+        label: "{{ __agent_sandbox_result.__agent_sandbox_skill.name }}"
+
+    - name: Remove the files the local skills no longer have
+      ansible.builtin.file:
+        path: "{{ __agent_sandbox_stale }}"
+        state: absent
+      loop: "{{ _agent_sandbox_stale_skill_files }}"
+      loop_control:
+        loop_var: __agent_sandbox_stale
+
+    - name: Check out the git skills
+      ansible.builtin.git:
+        repo: "{{ __agent_sandbox_skill.git }}"
+        dest: "{{ _agent_sandbox_skill_checkouts }}/{{ __agent_sandbox_skill.name }}"
+        version: "{{ __agent_sandbox_skill.version | default('HEAD') }}"
+      loop: "{{ _agent_sandbox_git_skills }}"
+      loop_control:
+        loop_var: __agent_sandbox_skill
+        label: "{{ __agent_sandbox_skill.name }}"
+      when: not ansible_check_mode
+
+    # Mirrors the skill's subdirectory, so files removed upstream go too, and the .git directory stays out
+    - name: Mirror the git skills
+      ansible.builtin.command:
+        argv:
+          - rsync
+          - --archive
+          - --delete
+          - --exclude=.git
+          - --itemize-changes
+          - "{{ _agent_sandbox_skill_checkouts }}/{{ __agent_sandbox_skill.name }}/{{ __agent_sandbox_skill.path | default('') }}/"
+          - "{{ agent_sandbox_home }}/.agents/skills/{{ __agent_sandbox_skill.name }}/"
+      loop: "{{ _agent_sandbox_git_skills }}"
+      loop_control:
+        loop_var: __agent_sandbox_skill
+        label: "{{ __agent_sandbox_skill.name }}"
+      register: __agent_sandbox_skill_sync
+      changed_when: __agent_sandbox_skill_sync.stdout | length > 0
+      when: not ansible_check_mode

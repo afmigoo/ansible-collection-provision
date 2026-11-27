@@ -1,0 +1,12 @@
+---
+galaxy_info:
+  author: afmigoo
+  description: Rootless Vagrant (vagrant-libvirt in each user's libvirt session) on Debian
+  license: MIT
+  min_ansible_version: "2.17"
+  platforms:
+    - name: Debian
+      versions:
+        - trixie
+        - bookworm
+dependencies: []

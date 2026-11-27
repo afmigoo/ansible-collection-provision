@@ -1,0 +1,56 @@
+---
+- name: Stat the shared context
+  ansible.builtin.stat:
+    path: "{{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.target }}"
+    get_checksum: false
+  loop: "{{ _opencode_sandbox_links }}"
+  loop_control:
+    loop_var: __opencode_sandbox_link
+    label: "{{ __opencode_sandbox_link.target }}"
+  register: __opencode_sandbox_link_targets
+
+- name: Stat the link paths
+  ansible.builtin.stat:
+    path: "{{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.path }}"
+    follow: false
+    get_checksum: false
+  loop: "{{ _opencode_sandbox_links }}"
+  loop_control:
+    loop_var: __opencode_sandbox_link
+    label: "{{ __opencode_sandbox_link.path }}"
+  register: __opencode_sandbox_link_paths
+
+# file won't replace a directory that has files in it with a link
+- name: Remove files and directories where links belong
+  ansible.builtin.file:
+    path: "{{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.path }}"
+    state: absent
+  loop: "{{ _opencode_sandbox_links }}"
+  loop_control:
+    loop_var: __opencode_sandbox_link
+    index_var: __opencode_sandbox_index
+    label: "{{ __opencode_sandbox_link.path }}"
+  when:
+    - __opencode_sandbox_link_targets.results[__opencode_sandbox_index].stat.exists
+    - __opencode_sandbox_link_paths.results[__opencode_sandbox_index].stat.exists
+    - not __opencode_sandbox_link_paths.results[__opencode_sandbox_index].stat.islnk
+  register: __opencode_sandbox_link_removals
+
+# In check mode the removal above only reported its change, and the path is still there
+- name: Link to the shared context
+  ansible.builtin.file:
+    src: "{{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.target }}"
+    dest: "{{ opencode_sandbox_home }}/{{ __opencode_sandbox_link.path }}"
+    state: link
+    owner: "{{ opencode_sandbox_user }}"
+    group: "{{ opencode_sandbox_user }}"
+    follow: false
+  loop: "{{ _opencode_sandbox_links }}"
+  loop_control:
+    loop_var: __opencode_sandbox_link
+    index_var: __opencode_sandbox_index
+    label: "{{ __opencode_sandbox_link.path }}"
+  when:
+    - __opencode_sandbox_link_targets.results[__opencode_sandbox_index].stat.exists
+    - not (ansible_check_mode and __opencode_sandbox_link_removals.results[__opencode_sandbox_index] is changed)
+  register: __opencode_sandbox_link_results

@@ -1,0 +1,25 @@
+---
+- name: Read the Claude Code settings
+  ansible.builtin.slurp:
+    src: "{{ claude_sandbox_home }}/.claude/settings.json"
+  register: __claude_sandbox_settings_file
+  failed_when: false
+
+# Keeps the keys `claude plugin` writes; comparing parsed JSON ignores how claude formats the file.
+# No diff: the settings may hold API keys
+- name: Write the Claude Code settings
+  ansible.builtin.copy:
+    content: "{{ _claude_sandbox_settings | to_nice_json(indent=2) }}\n"
+    dest: "{{ claude_sandbox_home }}/.claude/settings.json"
+    owner: "{{ claude_sandbox_user }}"
+    group: "{{ claude_sandbox_user }}"
+    mode: "0644"
+  diff: false
+  vars:
+    _claude_sandbox_current: >-
+      {{ (__claude_sandbox_settings_file.content | b64decode | from_json)
+         if __claude_sandbox_settings_file.content is defined else {} }}
+    _claude_sandbox_settings: >-
+      {{ _claude_sandbox_current | dict2items | selectattr('key', 'in', ['enabledPlugins', 'extraKnownMarketplaces'])
+         | items2dict | combine(claude_sandbox_settings, recursive=true) }}
+  when: _claude_sandbox_current != _claude_sandbox_settings

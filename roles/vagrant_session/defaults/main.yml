@@ -1,0 +1,9 @@
+---
+# Master gate, the role does nothing unless enabled.
+# Vagrant with vagrant-libvirt in each user's own libvirt session (Debian only, Ubuntu doesn't package Vagrant).
+# Adds the users to the kvm group and makes qemu-bridge-helper setuid root, limited to virbr0. Needs nested
+# virtualization when the host is itself a VM.
+vagrant_session_enable: false
+
+# Existing users that run Vagrant VMs, e.g. [agent]
+vagrant_session_users: []

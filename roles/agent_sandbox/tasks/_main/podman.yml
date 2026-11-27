@@ -1,0 +1,10 @@
+---
+- name: Set up rootless podman for the agent
+  ansible.builtin.include_role:
+    name: afmigoo.provision.podman
+    apply:
+      tags: [agent_sandbox, agent_sandbox_podman]
+  vars:
+    podman_enable: true
+    podman_rootless_users:
+      - "{{ agent_sandbox_user }}"

@@ -1,0 +1,14 @@
+---
+# A file changed on the host (roles/files/vars/test.yml) gets its content and mode back
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Change a file the role manages
+      ansible.builtin.copy:
+        content: "edited on the host\n"
+        dest: /etc/molecule-changed.txt
+        owner: root
+        group: root
+        mode: "0600"

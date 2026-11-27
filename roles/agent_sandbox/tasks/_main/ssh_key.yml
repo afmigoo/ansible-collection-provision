@@ -7,14 +7,6 @@
     group: "{{ agent_sandbox_user }}"
     mode: "0700"
 
-# In check mode on a new host the agent user is only simulated, and become_user can't switch to it
-- name: Look up the agent user in check mode
-  ansible.builtin.getent:
-    database: passwd
-    key: "{{ agent_sandbox_user }}"
-    fail_key: false
-  when: ansible_check_mode
-
 # The private key never leaves the host. It is only generated when missing, so re-provisioning keeps it and the
 # deploy keys added for it; a rebuilt host gets a new one
 - name: Generate the agent SSH key if missing
@@ -32,6 +24,4 @@
     creates: "{{ agent_sandbox_home }}/.ssh/id_ed25519"
   become: true
   become_user: "{{ agent_sandbox_user }}"
-  when: >-
-    not ansible_check_mode
-    or (ansible_facts['getent_passwd'] | default({})).get(agent_sandbox_user) is not none
+  when: _agent_sandbox_user_ready | bool

@@ -1,0 +1,121 @@
+---
+- name: Preparation
+  ansible.builtin.import_tasks: preparation.yml
+  tags: [opencode_sandbox, opencode_sandbox_verify]
+
+- name: Probe opencode
+  tags: [opencode_sandbox, opencode_sandbox_verify]
+  block:
+    - name: Run opencode --version
+      ansible.builtin.command: /usr/local/bin/opencode --version
+      register: __opencode_sandbox_version
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Read the opencode config
+      ansible.builtin.slurp:
+        src: "{{ opencode_sandbox_home }}/.config/opencode/opencode.json"
+      register: __opencode_sandbox_config_file
+      failed_when: false
+      when: opencode_sandbox_config | length > 0
+
+    - name: Assert opencode
+      ansible.builtin.assert:
+        that:
+          - opencode_sandbox_version in __opencode_sandbox_version.stdout | default('')
+          - opencode_sandbox_config | length == 0 or _opencode_sandbox_current == opencode_sandbox_config
+        fail_msg: >-
+          opencode --version: {{ __opencode_sandbox_version.stdout | default('') }}{{ __opencode_sandbox_version.msg | default('') }}
+          (expected {{ opencode_sandbox_version }}); opencode.json matches opencode_sandbox_config:
+          {{ _opencode_sandbox_current == opencode_sandbox_config }}
+      vars:
+        _opencode_sandbox_current: >-
+          {{ (__opencode_sandbox_config_file.content | b64decode | from_json)
+             if __opencode_sandbox_config_file.content is defined else {} }}
+
+# Re-runs the links in check mode: any change means a link is missing or points elsewhere. check_mode here doesn't set
+# ansible_check_mode, so a real file or directory at a link's path fails the link task
+- name: Check the links to the shared context
+  when: opencode_sandbox_enable_links | bool
+  tags: [opencode_sandbox, opencode_sandbox_verify]
+  block:
+    - name: Re-run the links in check mode
+      ansible.builtin.import_tasks: _main/links.yml
+      check_mode: true
+
+    - name: Assert the links
+      ansible.builtin.assert:
+        that: _opencode_sandbox_changed | length == 0
+        fail_msg: "Not links to ~/.agents: {{ _opencode_sandbox_changed | join(', ') }}"
+      vars:
+        _opencode_sandbox_changed: >-
+          {{ (__opencode_sandbox_link_removals.results + __opencode_sandbox_link_results.results) | select('changed')
+             | map(attribute='__opencode_sandbox_link.path') | unique | list }}
+
+# Asks opencode itself what it loads, so a wrong path or link shows up here
+- name: Check that opencode reads the shared skills and commands
+  tags: [opencode_sandbox, opencode_sandbox_verify]
+  block:
+    - name: Find the shared skills
+      ansible.builtin.find:
+        paths: "{{ opencode_sandbox_home }}/.agents/skills"
+        patterns: SKILL.md
+        recurse: true
+        depth: 2
+      register: __opencode_sandbox_skill_files
+
+    - name: Find the shared commands
+      ansible.builtin.find:
+        paths: "{{ opencode_sandbox_home }}/.agents/commands"
+        patterns: "*.md"
+      register: __opencode_sandbox_command_files
+
+    # --pure skips external plugins, which opencode would otherwise fetch first
+    - name: List the skills opencode loads
+      ansible.builtin.command:
+        argv: [/usr/local/bin/opencode, debug, skill, --pure]
+        chdir: "{{ opencode_sandbox_home }}"
+      become: true
+      become_user: "{{ opencode_sandbox_user }}"
+      environment:
+        HOME: "{{ opencode_sandbox_home }}"
+      register: __opencode_sandbox_skills
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Show the config opencode loads
+      ansible.builtin.command:
+        argv: [/usr/local/bin/opencode, debug, config, --pure]
+        chdir: "{{ opencode_sandbox_home }}"
+      become: true
+      become_user: "{{ opencode_sandbox_user }}"
+      environment:
+        HOME: "{{ opencode_sandbox_home }}"
+      register: __opencode_sandbox_loaded_config
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Assert opencode reads the shared context
+      ansible.builtin.assert:
+        that:
+          - __opencode_sandbox_skills.rc == 0
+          - __opencode_sandbox_loaded_config.rc == 0
+          - _opencode_sandbox_missing_skills | length == 0
+          - not (opencode_sandbox_enable_links | bool) or _opencode_sandbox_missing_commands | length == 0
+        fail_msg: >-
+          opencode doesn't load these skills: {{ _opencode_sandbox_missing_skills }}, commands:
+          {{ _opencode_sandbox_missing_commands }} ({{ __opencode_sandbox_skills.stderr | default('') }}
+          {{ __opencode_sandbox_loaded_config.stderr | default('') }})
+      vars:
+        _opencode_sandbox_missing_skills: >-
+          {{ __opencode_sandbox_skill_files.files | map(attribute='path')
+             | difference((__opencode_sandbox_skills.stdout | from_json | map(attribute='location') | list)
+                          if __opencode_sandbox_skills.rc == 0 else []) }}
+        _opencode_sandbox_missing_commands: >-
+          {{ __opencode_sandbox_command_files.files | map(attribute='path') | map('basename')
+             | map('splitext') | map('first')
+             | difference(((__opencode_sandbox_loaded_config.stdout | from_json).command | default({}) | list)
+                          if __opencode_sandbox_loaded_config.rc == 0 else []) }}

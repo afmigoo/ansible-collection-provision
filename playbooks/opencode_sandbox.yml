@@ -1,0 +1,13 @@
+---
+# opencode for an agent user on a prepared host: the agent user and its shared context (agent_sandbox), then
+# opencode_sandbox. opencode_sandbox_from_scratch also sets up and hardens a fresh host.
+- name: Provision a opencode agent sandbox
+  hosts: "{{ provision_hosts | default('all') }}"
+  gather_facts: false
+  become: true
+  vars:
+    agent_sandbox_enable: true
+    opencode_sandbox_enable: true
+  roles:
+    - role: afmigoo.provision.agent_sandbox
+    - role: afmigoo.provision.opencode_sandbox
